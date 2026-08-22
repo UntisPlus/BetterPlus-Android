@@ -1,4 +1,4 @@
-rootProject.name = "BetterUntis"
+rootProject.name = "UntisPlus"
 
 pluginManagement {
 	repositories {

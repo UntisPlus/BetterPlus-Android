@@ -7,7 +7,6 @@ import java.util.Properties
 
 plugins {
 	alias(libs.plugins.agp.application)
-	alias(libs.plugins.sentry.gradle)
 	alias(libs.plugins.kotlin.android)
 	alias(libs.plugins.kotlin.compose)
 	alias(libs.plugins.kotlin.serialization)
@@ -28,22 +27,20 @@ val gmsImplementation: Configuration by configurations.creating
 
 android {
 	compileSdk = 35
-	namespace = "com.sapuseven.untis"
+	namespace = "com.deelabs.untisplus"
 
 	androidResources {
 		generateLocaleConfig = true
 	}
 
 	defaultConfig {
-		applicationId = "com.sapuseven.untis"
+		applicationId = "com.deelabs.untisplus"
 		minSdk = 21
 		targetSdk = 35
 		versionCode = generateVersionCode()
 		versionName = "5.0.0-beta04"
 		vectorDrawables.useSupportLibrary = true
-		testInstrumentationRunner = "com.sapuseven.untis.HiltTestRunner"
-
-		buildConfigField("String", "SENTRY_DSN", "\"https://d3b77222abce4fcfa74fda2185e0f8dc@o1136770.ingest.sentry.io/6188900\"")
+		testInstrumentationRunner = "com.deelabs.untisplus.HiltTestRunner"
 
 		ksp {
 			arg("room.schemaLocation", "$projectDir/schemas")
@@ -58,16 +55,16 @@ android {
 			signingProperties.load(FileInputStream(propertiesFile))
 		}
 
-		if (file("BetterUntis.jks").exists()) {
+		if (file("UntisPlus.jks").exists()) {
 			create("release") {
-				storeFile = file("BetterUntis.jks")
+				storeFile = file("UntisPlus.jks")
 				storePassword = signingProperties["keystorePassword"] as String? ?: System.getenv("KEYSTORE_PASSWORD")
 				keyAlias = "release"
 				keyPassword = signingProperties["keyReleasePassword"] as String? ?: System.getenv("KEY_RELEASE_PASSWORD")
 			}
 
 			getByName("debug") {
-				storeFile = file("BetterUntis.jks")
+				storeFile = file("UntisPlus.jks")
 				storePassword = signingProperties["keystorePassword"] as String? ?: System.getenv("KEYSTORE_PASSWORD")
 				keyAlias = "debug"
 				keyPassword = signingProperties["keyDebugPassword"] as String? ?: System.getenv("KEY_DEBUG_PASSWORD")
@@ -81,7 +78,7 @@ android {
 			isShrinkResources = true
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
-			if (file("BetterUntis.jks").exists()) {
+			if (file("UntisPlus.jks").exists()) {
 				signingConfig = signingConfigs.getByName("release")
 			}
 		}
@@ -96,7 +93,7 @@ android {
 				freeCompilerArgs = listOf("-Xdebug")
 			}
 
-			if (file("BetterUntis.jks").exists()) {
+			if (file("UntisPlus.jks").exists()) {
 				signingConfig = signingConfigs.getByName("debug")
 			}
 		}
@@ -141,10 +138,6 @@ android {
 
 kotlin {
 	jvmToolchain(21)
-}
-
-sentry {
-	autoUploadProguardMapping.set(System.getenv("SENTRY_PROJECT") != null)
 }
 
 aboutLibraries {
@@ -226,8 +219,6 @@ dependencies {
 	implementation(libs.material.theme.adapter)
 	implementation(libs.mikepenz.aboutlibraries.compose)
 	implementation(libs.mikepenz.aboutlibraries.core)
-	implementation(libs.sentry.android)
-	implementation(libs.sentry.compose.android)
 	implementation(libs.zxing)
 	implementation(libs.protobuf.javalite)
 	implementation(libs.androidx.transition.ktx)
@@ -265,12 +256,8 @@ dependencies {
 
 	// fix for Crash from missing `beginTransactionReadOnly()` method in Room due to sqlite version mismatch
 	// see https://issuetracker.google.com/issues/400483860#comment7
-	implementation("androidx.sqlite:sqlite:2.5.1") {
-		exclude(group = "io.sentry", module = "sentry-android-sqlite")
-	}
-	implementation("androidx.sqlite:sqlite-ktx:2.5.1") {
-		exclude(group = "io.sentry", module = "sentry-android-sqlite")
-	}
+	implementation("androidx.sqlite:sqlite:2.5.1")
+	implementation("androidx.sqlite:sqlite-ktx:2.5.1")
 	configurations.configureEach {
 		resolutionStrategy {
 			force("androidx.sqlite:sqlite:2.5.1")

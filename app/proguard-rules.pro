@@ -22,11 +22,11 @@
 
 -dontnote kotlinx.serialization.SerializationKt
 -keepattributes *Annotation*, InnerClasses
--keep,includedescriptorclasses class com.sapuseven.untis.**$$serializer { *; }
--keepclassmembers class com.sapuseven.untis.** {
+-keep,includedescriptorclasses class com.deelabs.untisplus.**$$serializer { *; }
+-keepclassmembers class com.deelabs.untisplus.** {
     *** Companion;
 }
--keepclasseswithmembers class com.sapuseven.untis.** {
+-keepclasseswithmembers class com.deelabs.untisplus.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 -keepclassmembernames class kotlinx.** {
@@ -39,7 +39,7 @@
 -keep public class * extends androidx.lifecycle.ViewModel { *; }
 
 # Keep custom NavTypes
--keep class com.sapuseven.untis.api.model.untis.enumeration.ElementType { *; }
+-keep class com.deelabs.untisplus.api.model.untis.enumeration.ElementType { *; }
 
 # Please add these rules to your existing keep rules in order to suppress warnings.
 # This is generated automatically by the Android Gradle plugin.

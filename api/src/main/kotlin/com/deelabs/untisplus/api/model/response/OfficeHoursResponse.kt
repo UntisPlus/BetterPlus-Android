@@ -1,0 +1,14 @@
+package com.deelabs.untisplus.api.model.response
+
+import com.deelabs.untisplus.api.model.untis.timetable.OfficeHour
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class OfficeHoursResponse(
+		val result: OfficeHoursResult? = null
+) : BaseResponse()
+
+@Serializable
+data class OfficeHoursResult(
+		val officeHours: List<OfficeHour>
+)

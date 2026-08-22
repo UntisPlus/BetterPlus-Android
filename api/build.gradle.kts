@@ -56,8 +56,8 @@ apiSpecList.forEach { file ->
 		generatorName.set("kotlin")
 		inputSpec.set("${layout.projectDirectory}/spec/untis-intern/untis-$apiName.yaml")
 		outputDir.set("${layout.buildDirectory.get()}/generated")
-		apiPackage.set("com.sapuseven.untis.api.$packageName")
-		modelPackage.set("com.sapuseven.untis.model.$packageName")
+		apiPackage.set("com.deelabs.untisplus.api.$packageName")
+		modelPackage.set("com.deelabs.untisplus.model.$packageName")
 		configOptions.set(
 			mapOf(
 				"library" to "jvm-ktor",
@@ -67,7 +67,7 @@ apiSpecList.forEach { file ->
 		)
 		typeMappings.set(
 			mapOf(
-				"java.time.OffsetDateTime" to "com.sapuseven.untis.api.serializer.DateTime"
+				"java.time.OffsetDateTime" to "com.deelabs.untisplus.api.serializer.DateTime"
 			)
 		)
 	}

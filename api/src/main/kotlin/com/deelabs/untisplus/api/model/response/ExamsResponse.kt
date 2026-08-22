@@ -1,0 +1,18 @@
+package com.deelabs.untisplus.api.model.response
+
+import com.deelabs.untisplus.api.model.untis.classreg.Exam
+import com.deelabs.untisplus.api.model.untis.enumeration.ElementType
+import kotlinx.serialization.Serializable
+
+
+@Serializable
+data class ExamsResponse(
+	val result: ExamsResult? = null
+) : BaseResponse()
+
+@Serializable
+data class ExamsResult(
+	val id: Long,
+	val type: ElementType,
+	val exams: List<Exam>
+)

@@ -54,7 +54,7 @@
     <string name="all_teachers">Teachers</string>
     <string name="all_yes">Yes</string>
     <string name="app_desc">An alternative mobile client for the Untis timetable system.</string>
-    <string name="app_name" translatable="false">BetterUntis</string>
+    <string name="app_name" translatable="false">UntisPlus</string>
     <string name="elementpicker_hint_search">Search…</string>
     <string name="elementpicker_hint_search_classes">Search for classes…</string>
     <string name="elementpicker_hint_search_rooms">Search for rooms…</string>

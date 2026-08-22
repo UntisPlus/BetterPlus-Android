@@ -1,6 +1,6 @@
 edition = "2023";
 
-option java_package = "com.sapuseven.untis.data.settings.model";
+option java_package = "com.deelabs.untisplus.data.settings.model";
 option java_multiple_files = true;
 
 enum DarkTheme {
