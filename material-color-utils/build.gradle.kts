@@ -13,6 +13,10 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 tasks {
     compileKotlin {
         compilerOptions.jvmTarget = JvmTarget.JVM_17

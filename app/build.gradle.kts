@@ -139,6 +139,10 @@ android {
 	}
 }
 
+kotlin {
+	jvmToolchain(21)
+}
+
 sentry {
 	autoUploadProguardMapping.set(System.getenv("SENTRY_PROJECT") != null)
 }
