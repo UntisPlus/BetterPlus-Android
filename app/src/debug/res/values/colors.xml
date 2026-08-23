@@ -1,6 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<!--color name="colorPrimary">#9E9E9E</color>
-	<color name="colorPrimaryDark">#616161</color>
-	<color name="colorAccent">#607D8B</color-->
+	<color name="color_launcher_background">#00897B</color>
 </resources>

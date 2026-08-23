@@ -161,19 +161,6 @@ fun SettingsCategoryGeneral(viewModel: SettingsScreenViewModel) {
 		}
 	}
 
-	PreferenceGroup(stringResource(R.string.preference_category_reports)) {
-		Preference(
-			title = { Text(stringResource(R.string.preference_reports_info)) },
-			summary = { Text(stringResource(R.string.preference_reports_info_desc)) },
-			leadingContent = {
-				Icon(
-					painter = painterResource(R.drawable.settings_info),
-					contentDescription = null
-				)
-			}
-		)
-	}
-
 	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
 		val packageName = LocalContext.current.packageName
 		val context = LocalContext.current

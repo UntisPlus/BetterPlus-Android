@@ -13,7 +13,6 @@ import com.deelabs.untisplus.ui.navigation.AppNavigator
 import com.deelabs.untisplus.ui.navigation.AppRoutes
 import com.deelabs.untisplus.ui.pages.main.MainAppContent
 import com.deelabs.untisplus.ui.pages.main.MainViewModel
-import com.deelabs.untisplus.data.repository.GlobalSettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -24,9 +23,6 @@ class MainActivity : ComponentActivity() {
 
 		const val EXTRA_STRING_PERIOD_ELEMENT = "com.deelabs.untisplus.activities.main.element"
 	}
-
-	@Inject
-	lateinit var globalSettingsRepository: GlobalSettingsRepository
 
 	@Inject
 	lateinit var appNavigator: AppNavigator
@@ -55,7 +51,6 @@ class MainActivity : ComponentActivity() {
 
 			MainAppContent(
 				userState = userState,
-				globalSettingsRepository = globalSettingsRepository,
 				settingsFlow = viewModel.userSettingsFlow,
 				navigator = viewModel.appNavigator
 			)
@@ -71,7 +66,6 @@ class MainActivity : ComponentActivity() {
 
 		setContent {
 			// TODO: Sooo... this doesn't change the theme when the user is switched...
-			val scope = rememberCoroutineScope()
 			val userSettingsRepository = userSettingsRepositoryFactory.create(MaterialTheme.colorScheme)
 
 			val darkTheme by userSettingsRepository.getSettings().map {
@@ -89,17 +83,6 @@ class MainActivity : ComponentActivity() {
 			val themeColor by userSettingsRepository.getSettings().map {
 				if (it.customThemeColor) Color(it.themeColor) else null
 			}.collectAsState(null)
-
-			val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-			LaunchedEffect(globalSettingsRepository) {
-				scope.launch {
-					globalSettingsRepository.getSettings().first().let {
-						if (!it.errorReportingSet) {
-							bottomSheetState.show()
-						}
-					}
-				}
-			}
 
 			AppTheme(darkTheme, darkThemeOled, themeColor) {
 				Surface(
@@ -127,8 +110,6 @@ class MainActivity : ComponentActivity() {
 								navigator = appNavigator,
 								startDestination = AppRoutes.Timetable()
 							)
-
-							ReportsInfoBottomSheet(globalSettingsRepository, bottomSheetState)
 
 							// Re-create the view when the user changes
 							LaunchedEffect(Unit) {
