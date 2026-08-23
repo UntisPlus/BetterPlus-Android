@@ -33,6 +33,17 @@ Run unit tests:
 ./gradlew :app:testDebugUnitTest
 ```
 
+## Verify downloads
+
+Release APKs are signed with the following keys. Obtainium and other stores show the signing certificate of installed apps — it should match one of these SHA-256 fingerprints:
+
+| Channel | Certificate | SHA-256 |
+|---|---|---|
+| Release (`com.deelabs.untisplus`) | `CN=UntisPlus, O=deelabs, C=DE` | `1fb668f186c26fbb48675e24ecbad508ff450d28158dc80066f48617316727bb` |
+| Debug (`.debug` app id) | `CN=UntisPlus Debug, O=deelabs, C=DE` | `90356be8bb6c85cb8650edc701dbe7979094bbfd27e74c0d4d487cd486aa2ff5` |
+
+The fingerprints are also stamped into every GitHub release's notes automatically.
+
 ## Contact
 
 - Email: [info@deelabs.tech](mailto:info@deelabs.tech)

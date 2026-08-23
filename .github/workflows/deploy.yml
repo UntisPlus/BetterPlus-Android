@@ -67,3 +67,21 @@ jobs:
               gh release create "$VERSION" --title "UntisPlus $VERSION" \
                   --generate-notes --latest
           gh release upload "$VERSION" "UntisPlus-${VERSION}.apk" --clobber
+
+      - name: Append signing certificate fingerprints to release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          FINGERPRINTS=$("$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk | grep "SHA-256 digest")
+          BODY=$(gh release view "$VERSION" --json body --jq .body)
+          if [[ "$BODY" != *"Signing certificate"* ]]; then
+              gh release edit "$VERSION" --notes "$BODY
+
+---
+
+Signing certificate SHA-256 fingerprints:
+\`\`\`
+$FINGERPRINTS
+\`\`\`"
+          fi
