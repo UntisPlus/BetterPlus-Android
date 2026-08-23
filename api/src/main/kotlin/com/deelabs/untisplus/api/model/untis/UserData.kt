@@ -16,5 +16,16 @@ data class UserData(
 	val klassenIds: List<Long> = emptyList(),
 	val rights: List<Right> = emptyList()
 ) {
-	fun getPeriodElement() = elemType?.let { PeriodElement(it, elemId) }
+	fun getPeriodElement() = elemType
+		?.takeIf { elemId > 0 }
+		?.let { PeriodElement(it, elemId) }
+
+	fun getFallbackPeriodElements(): List<PeriodElement> = buildList {
+		children.filterNotNull().forEach {
+			add(PeriodElement(ElementType.STUDENT, it.id))
+		}
+		klassenIds.forEach {
+			add(PeriodElement(ElementType.CLASS, it))
+		}
+	}
 }

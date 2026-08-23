@@ -161,12 +161,17 @@ class TimetableViewModel @Inject constructor(
 					_personalElement.value = it
 					_needsPersonalTimetable.emit(false)
 					//_currentElement.update { prev -> prev ?: it } // Update only if null
-				} ?: run {
-					_personalElement.value = currentUser.userData.elemType?.let {
-						PeriodElement(it, currentUser.userData.elemId)
+			} ?: run {
+				_personalElement.value = currentUser.userData.getPeriodElement()
+					?: currentUser.userData.getFallbackPeriodElements().firstOrNull()?.also {
+						Log.i(
+							"TimetableViewModel",
+							"Account has no usable personal element (elemType=${currentUser.userData.elemType}, elemId=${currentUser.userData.elemId}), " +
+								"falling back to $it (children=${currentUser.userData.children.size}, klassenIds=${currentUser.userData.klassenIds.size})"
+						)
 					}
-					_needsPersonalTimetable.emit(requestedElement == null && _personalElement.value == null)
-				}
+				_needsPersonalTimetable.emit(requestedElement == null && _personalElement.value == null)
+			}
 				_hourList.value = buildHourList(
 					user = currentUser,
 					range = userSettings.timetableRange.convertRangeToPair(),
