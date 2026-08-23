@@ -36,7 +36,7 @@ android {
 		minSdk = 21
 		targetSdk = 35
 		versionCode = generateVersionCode()
-		versionName = "5.0.0-beta04"
+		versionName = "5.0.0-beta05"
 		vectorDrawables.useSupportLibrary = true
 		testInstrumentationRunner = "com.deelabs.untisplus.HiltTestRunner"
 
