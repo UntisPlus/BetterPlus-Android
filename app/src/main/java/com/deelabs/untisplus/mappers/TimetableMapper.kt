@@ -50,32 +50,42 @@ class TimetableMapper @Inject constructor(
 		items: List<Period>,
 		contextType: ElementType
 	): List<Event<PeriodItem>> {
-		waitForSettings().apply {
-			return preparePeriods(items, timetableHideCancelled)
-				.mapToEvents(
-					this,
-					contextType
-				)
-				.prepareEvents(
-					timetableSubstitutionsIrregular,
-					timetableBackgroundIrregular
-				)
-		}
+		val settings = waitForSettings()
+		return preparePeriods(items, settings.timetableHideCancelled)
+			.mapToPeriodItems()
+			.apply { markSubstitutionsIrregular(settings.timetableSubstitutionsIrregular) }
+			.mapToEvents(settings, contextType)
 	}
 
 	private suspend fun waitForSettings() = userSettingsRepository.getSettings().filterNotNull().first()
 
-	private fun List<Period>.mapToEvents(
+	private fun List<Period>.mapToPeriodItems(): List<PeriodItem> =
+		map { PeriodItem(masterDataRepository = masterDataRepository, originalPeriod = it) }
+
+	/**
+	 * Marks items as irregular when elements were substituted.
+	 *
+	 * Must run before events are styled, otherwise forced-irregular items are
+	 * rendered with regular colors (upstream issues #489/#502).
+	 */
+	private fun List<PeriodItem>.markSubstitutionsIrregular(enabled: Boolean) {
+		if (!enabled) return
+		forEach { item ->
+			//TODO|| item.forceIrregular = item.forceIrregular || item.originalPeriod.backColor != UNTIS_DEFAULT_COLOR
+			item.forceIrregular =
+				item.classes.any { it.id != it.orgId }
+					|| item.teachers.any { it.id != it.orgId }
+					|| item.subjects.any { it.id != it.orgId }
+					|| item.rooms.any { it.id != it.orgId }
+		}
+	}
+
+	private fun List<PeriodItem>.mapToEvents(
 		userSettings: UserSettings,
 		contextType: ElementType,
 		includeOrgIds: Boolean = true,
 	): List<Event<PeriodItem>> {
-		return map { period ->
-			val periodItem = PeriodItem(
-				masterDataRepository = masterDataRepository,
-				originalPeriod = period
-			)
-
+		return map { periodItem ->
 			Event(
 				title = periodItem.getShort(ElementType.SUBJECT),
 				top = (
@@ -103,8 +113,8 @@ class TimetableMapper @Inject constructor(
 						)
 					),
 				eventStyle = getColorScheme(userSettings, periodItem),
-				start = period.startDateTime,
-				end = period.endDateTime,
+				start = periodItem.originalPeriod.startDateTime,
+				end = periodItem.originalPeriod.endDateTime,
 				data = periodItem
 			)
 		}
@@ -146,32 +156,6 @@ class TimetableMapper @Inject constructor(
 		hideCancelled: Boolean,
 	): List<Period> = mapNotNull { item ->
 		if (hideCancelled && item.`is`(PeriodState.CANCELLED)) return@mapNotNull null
-		item
-	}
-
-	/**
-	 * Prepares the items for the timetable.
-	 *
-	 * This function marks items as irregular when they match certain rules
-	 *
-	 * @param substitutionsIrregular Whether items with substitutions should be marked as irregular
-	 * @param backgroundIrregular Whether irregular items should have a different background color
-	 * @return A list of prepared items
-	 */
-	private fun List<Event<PeriodItem>>.prepareEvents(
-		substitutionsIrregular: Boolean,
-		backgroundIrregular: Boolean
-	): List<Event<PeriodItem>> = mapNotNull { item ->
-		if (substitutionsIrregular) {
-			item.data?.apply {
-				forceIrregular =
-					classes.find { it.id != it.orgId } != null
-						|| teachers.find { it.id != it.orgId } != null
-						|| subjects.find { it.id != it.orgId } != null
-						|| rooms.find { it.id != it.orgId } != null
-				//TODO|| backgroundIrregular.getValue() && item.data.element.backColor != UNTIS_DEFAULT_COLOR
-			}
-		}
 		item
 	}
 
