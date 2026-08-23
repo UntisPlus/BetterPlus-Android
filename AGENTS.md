@@ -33,8 +33,9 @@ Indentation is tabs for `.kt`/`.gradle`/`.xml` (`.editorconfig`) — match exist
 - Screenshot generation (`generate-screenshots.sh`, zsh): runs the `com.deelabs.untisplus.screenshots` instrumented tests on a device against the **debug** build (appId suffixed `.debug`), pulls PNGs via `adb exec-out run-as ...`; `process-screnshots.sh` / `combine-main-screenshots.sh` post-process with ImageMagick (`magick`). `android.injected.androidTest.leaveApksInstalledAfterRun=true` in `gradle.properties` is required for pulling screenshots.
 
 ## Workflow & releases
-- Branch model (README): `master` holds releases only; all development happens on `develop`. **PRs must target `develop`, never `master`.**
-- Releases are tag-triggered (`X.Y.Z` in `.github/workflows/deploy.yml`): builds signed APK/AAB, publishes to GitHub, Play Store (fastlane, `Gemfile`), F-Droid (`fdroid` branch where `versionCode = generateVersionCode()` gets pinned), and sapuseven.com.
+- Branch model: all development happens on `dev`; `master` holds stable code only. **PRs must target `dev`, never `master`.**
+- Releases: tag pushes or manual dispatch (`gh workflow run deploy.yml -f tag=<tag>`) build a signed release APK/AAB and publish it to GitHub Releases (`.github/workflows/deploy.yml`). Note: tag-push triggers are currently unreliable on this repo (transferred-repo event glitch) — dispatch works.
+- Dev builds: every push to `dev` builds a signed debug APK and publishes it to the rolling `dev` pre-release (`.github/workflows/dev.yml`); debug app id is suffixed `.debug` so it installs alongside release builds.
 - `versionCode` is regenerated per-minute at build time; only the F-Droid flow pins it.
 
 ## Gotchas

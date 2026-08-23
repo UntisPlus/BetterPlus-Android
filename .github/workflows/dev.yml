@@ -1,0 +1,55 @@
+name: Dev Build
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and publish debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > app/UntisPlus.jks
+
+      - name: Write signing properties
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_RELEASE_PASSWORD: ${{ secrets.KEY_RELEASE_PASSWORD }}
+          KEY_DEBUG_PASSWORD: ${{ secrets.KEY_DEBUG_PASSWORD }}
+        run: |
+          printf 'keystorePassword=%s\nkeyReleasePassword=%s\nkeyDebugPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_RELEASE_PASSWORD" "$KEY_DEBUG_PASSWORD" > app/signing.properties
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Publish to rolling dev release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk UntisPlus-dev-debug.apk
+          gh release view dev --json tagName > /dev/null 2>&1 || \
+              gh release create dev --prerelease --title "UntisPlus Dev (rolling)" \
+                  --notes "Latest debug build from the \`dev\` branch, updated automatically on every push. Installs alongside stable builds (app id ends in \`.debug\`)."
+          gh release upload dev UntisPlus-dev-debug.apk --clobber
