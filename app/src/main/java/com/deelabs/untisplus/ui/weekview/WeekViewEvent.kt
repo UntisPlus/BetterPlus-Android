@@ -52,10 +52,14 @@ sealed class EventStyle(
 		colorForScheme = { color },
 		textStyleForScheme = {
 			textStyle ?: TextStyle(
-				color = if (
-					ColorUtils.calculateContrast(Color.Black.toArgb(), color.toArgb()) >
-					ColorUtils.calculateContrast(Color.White.toArgb(), color.toArgb())
-				) Color.Black else Color.White
+				color = run {
+					// calculateContrast requires opaque colors and throws otherwise (#491)
+					val opaqueColor = ColorUtils.setAlphaComponent(color.toArgb(), 255)
+					if (
+						ColorUtils.calculateContrast(Color.Black.toArgb(), opaqueColor) >
+						ColorUtils.calculateContrast(Color.White.toArgb(), opaqueColor)
+					) Color.Black else Color.White
+				}
 			)
 		}
 	)
