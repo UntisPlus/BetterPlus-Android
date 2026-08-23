@@ -1,0 +1,6 @@
+Fresh start: UntisPlus v1.0.0
+
+- New login flow: welcome screen, API provider selection (Official / UntisPlus / custom endpoint) with silent re-login and cache refresh
+- Info center announcements render fully again; messenger errors no longer hide them
+- Timetable cache fixes so cached weeks survive restarts
+- Retargeted to the UntisPlus project (com.deelabs.untisplus), installable alongside BetterUntis

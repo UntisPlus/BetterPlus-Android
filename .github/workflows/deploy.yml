@@ -50,7 +50,11 @@ jobs:
           if [[ -n "$VERSION_INPUT" ]]; then
             VERSION="$VERSION_INPUT"
           else
-            VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+            VERSION=$(grep -oP 'versionNameValue = "\K[^"]+' app/build.gradle.kts)
+          fi
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::Could not determine version from app/build.gradle.kts"
+            exit 1
           fi
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "Releasing UntisPlus $VERSION"
