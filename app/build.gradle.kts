@@ -2,7 +2,6 @@ import com.google.protobuf.gradle.id
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.FileInputStream
-import java.util.Date
 import java.util.Properties
 
 plugins {
@@ -18,6 +17,21 @@ plugins {
 	alias(libs.plugins.protobuf)
 }
 
+// Derives a monotonic versionCode from versionName so bumping the name
+// (e.g. v1.0.1 or v1.1.0) automatically raises the code for app stores.
+// Stable releases end in 99; -betaN ends in N (1-98), keeping betas below final.
+val versionNameValue = "v1.0.0"
+
+fun deriveVersionCode(name: String): Int {
+	val match = Regex("v?(\\d+)\\.(\\d+)\\.(\\d+)(?:[-.]beta\\.?(\\d+))?").find(name)
+		?: throw IllegalArgumentException("Cannot parse versionName '$name'")
+	val base = match.groupValues[1].toInt() * 1_000_000 +
+		match.groupValues[2].toInt() * 10_000 +
+		match.groupValues[3].toInt() * 100
+	val beta = match.groupValues[4]
+	return if (beta.isEmpty()) base + 99 else base + beta.toInt()
+}
+
 android {
 	compileSdk = 35
 	namespace = "com.deelabs.untisplus"
@@ -30,8 +44,8 @@ android {
 		applicationId = "com.deelabs.untisplus"
 		minSdk = 21
 		targetSdk = 35
-		versionCode = 1
-		versionName = "v1.0.0"
+		versionCode = deriveVersionCode(versionNameValue)
+		versionName = versionNameValue
 		vectorDrawables.useSupportLibrary = true
 		testInstrumentationRunner = "com.deelabs.untisplus.HiltTestRunner"
 

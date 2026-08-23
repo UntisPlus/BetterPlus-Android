@@ -55,18 +55,26 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "Releasing UntisPlus $VERSION"
 
-      - name: Assemble release APK
-        run: ./gradlew assembleRelease
+      - name: Assemble release APK and bundle
+        run: ./gradlew assembleRelease bundleRelease
 
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/release/app-release.apk "UntisPlus-${VERSION}.apk"
+          cp app/build/outputs/apk/release/app-release.apk UntisPlus.apk
           gh release view "$VERSION" --json tagName > /dev/null 2>&1 || \
               gh release create "$VERSION" --title "UntisPlus $VERSION" \
                   --generate-notes --latest
-          gh release upload "$VERSION" "UntisPlus-${VERSION}.apk" --clobber
+          gh release upload "$VERSION" "UntisPlus-${VERSION}.apk" UntisPlus.apk --clobber
+
+      - name: Upload AAB artifact for Play Store
+        uses: actions/upload-artifact@v4
+        with:
+          name: UntisPlus-${{ env.VERSION }}-aab
+          path: app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
 
       - name: Append signing certificate fingerprints to release notes
         env:
