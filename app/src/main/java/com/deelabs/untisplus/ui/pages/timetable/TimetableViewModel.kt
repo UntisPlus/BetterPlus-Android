@@ -50,12 +50,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
@@ -115,6 +117,20 @@ class TimetableViewModel @Inject constructor(
 
 	private val _weekViewEventStyle = MutableStateFlow(WeekViewEventStyle.default())
 	val weekViewEventStyle: StateFlow<WeekViewEventStyle> = _weekViewEventStyle
+
+	val numDays: StateFlow<Int> = userSettingsRepository.getSettings().map { userSettings ->
+		val customRangeDays = userSettings.weekCustomRangeList
+			.mapNotNull { dayName -> runCatching { DayOfWeek.valueOf(dayName) }.getOrNull() }
+
+		if (customRangeDays.isNotEmpty())
+			customRangeDays.maxOf { it.value } // Columns are always aligned to the start of the week
+		else
+			currentUser.timeGrid.days.maxOfOrNull { it.day.value } ?: 5
+	}.stateIn(
+		scope = viewModelScope,
+		started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
+		initialValue = 5
+	)
 
 	private val _userSettings = userSettingsRepository.getSettings()
 

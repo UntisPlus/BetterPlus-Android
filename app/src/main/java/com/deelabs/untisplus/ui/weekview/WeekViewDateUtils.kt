@@ -55,7 +55,7 @@ internal fun startDateForPageIndex(
 	return weekStartForDate(LocalDate.now(clock), firstDayOfWeek).plusWeeks(pageIndex)
 }
 
-private fun weekStartForDate(
+internal fun weekStartForDate(
 	date: LocalDate, firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY
 ): LocalDate = date.with(WeekFields.of(firstDayOfWeek, 4).dayOfWeek(), 1).let {
 	if (it.isAfter(date)) it.minusWeeks(1)

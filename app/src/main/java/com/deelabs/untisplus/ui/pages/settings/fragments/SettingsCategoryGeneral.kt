@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import com.sapuseven.compose.protostore.ui.preferences.Preference
 import com.sapuseven.compose.protostore.ui.preferences.PreferenceGroup
 import com.sapuseven.compose.protostore.ui.preferences.SwitchPreference
+import com.sapuseven.compose.protostore.ui.preferences.WeekRangePreference
 import com.deelabs.untisplus.BuildConfig
 import com.deelabs.untisplus.R
 import com.deelabs.untisplus.activities.AutoMuteConfigurationActivity
@@ -51,11 +52,11 @@ fun SettingsCategoryGeneral(viewModel: SettingsScreenViewModel) {
 		onValueChange = { flingEnable = it }
 	)*/
 
-	/* Not supported yet
 	PreferenceGroup(stringResource(R.string.preference_category_general_week_display)) {
 		WeekRangePreference(
 			title = { Text(stringResource(R.string.preference_week_custom_range)) },
-			settingsRepository = viewModel.repository,
+			summary = { Text(stringResource(R.string.preference_week_custom_range_summary)) },
+			settingsRepository = viewModel.userSettingsRepository,
 			value = { it.weekCustomRangeList.toSet() },
 			onValueChange = {
 				clearWeekCustomRange()
@@ -63,6 +64,7 @@ fun SettingsCategoryGeneral(viewModel: SettingsScreenViewModel) {
 			}
 		)
 
+		/* Not supported yet
 		SwitchPreference(
 			title = { Text(stringResource(R.string.preference_week_snap_to_days)) },
 			summary = { Text(stringResource(R.string.preference_week_snap_to_days_summary)) },
@@ -82,7 +84,8 @@ fun SettingsCategoryGeneral(viewModel: SettingsScreenViewModel) {
 			value = { it.weekCustomLength },
 			onValueChange = { weekCustomLength = it }
 		)
-	}*/
+		*/
+	}
 
 	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 		val visible by viewModel.userSettingsRepository.getSettings().map { it.automuteEnable }.collectAsState(initial = false)

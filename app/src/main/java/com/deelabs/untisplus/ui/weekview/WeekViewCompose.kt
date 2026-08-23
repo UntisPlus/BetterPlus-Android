@@ -590,6 +590,7 @@ fun <T> WeekViewCompose(
 	onReload: suspend (pageIndex: Int) -> Unit,
 	onItemClick: (Pair<List<Event<T>>, Int>) -> Unit,
 	modifier: Modifier = Modifier,
+	numDays: Int = 5,
 	onZoom: suspend (zoomLevel: Float) -> Unit = {},
 	currentTime: LocalDateTime = LocalDateTime.now(),
 	eventContent: @Composable (event: Event<T>) -> Unit = { event ->
@@ -623,7 +624,26 @@ fun <T> WeekViewCompose(
 
 	val startPage = Int.MAX_VALUE / 2
 	val pagerState = rememberPagerState(initialPage = startPage) { Int.MAX_VALUE }
-	val numDays = 5
+
+	// Day focus mode: when set, only this day is rendered full-width (tap the day header again to leave)
+	var focusedDay by remember { mutableStateOf<LocalDate?>(null) }
+
+	fun effectivePageOffset(rawOffset: Int): Int {
+		val focused = focusedDay ?: return rawOffset
+		return pageIndexForDate(focused.plusDays(rawOffset.toLong())).toInt()
+	}
+
+	val onHeaderDayClick: (LocalDate) -> Unit = { day ->
+		scope.launch {
+			if (focusedDay == day) {
+				focusedDay = null
+				pagerState.animateScrollToPage((startPage + pageIndexForDate(day)).toInt())
+			} else {
+				focusedDay = day
+				pagerState.scrollToPage(startPage + ChronoUnit.DAYS.between(LocalDate.now(), day).toInt())
+			}
+		}
+	}
 
 	val currentOnPageChange by rememberUpdatedState(onPageChange)
 
@@ -708,21 +728,31 @@ fun <T> WeekViewCompose(
 		}
 
 		LaunchedEffect(pagerState) {
-			snapshotFlow { pagerState.currentPage - startPage }.collect { page ->
-				currentOnPageChange(page)
+			snapshotFlow { Pair(pagerState.currentPage, focusedDay) }.collect { (page, _) ->
+				currentOnPageChange(effectivePageOffset(page - startPage))
 			}
 		}
 
 		HorizontalPager(state = pagerState) { index ->
 			val pageOffset = index - startPage
+			val focused = focusedDay
 			val visibleStartDate =
-				weekLogicService.currentWeekStartDate().plusWeeks(pageOffset.toLong()) // 1 = Monday, 7 = Sunday
+				focused?.plusDays(pageOffset.toLong())
+					?: weekLogicService.currentWeekStartDate().plusWeeks(pageOffset.toLong()) // 1 = Monday, 7 = Sunday
+			val displayDays = if (focused != null) 1 else numDays
 
 			Column {
 				WeekViewHeader(
 					startDate = visibleStartDate,
 					currentDate = currentTime.toLocalDate(),
-					numDays = numDays,
+					numDays = displayDays,
+					dayHeader = { day ->
+						WeekViewHeaderDay(
+							day = day,
+							isToday = currentTime.toLocalDate() == day,
+							onClick = onHeaderDayClick
+						)
+					},
 					modifier = Modifier
 						.onGloballyPositioned { headerHeight = it.size.height }
 				)
@@ -733,7 +763,7 @@ fun <T> WeekViewCompose(
 					val onRefresh: () -> Unit = {
 						isRefreshing = true
 						scope.launch {
-							onReload(pageOffset)
+							onReload(effectivePageOffset(pageOffset))
 							pullRefreshState.snapTo(0f)
 							isRefreshing = false
 						}
@@ -741,7 +771,7 @@ fun <T> WeekViewCompose(
 
 					val holidayEvents = remember {
 						holidays.filter { holiday ->
-							visibleStartDate.isBefore(holiday.end) && visibleStartDate.plusDays(numDays.toLong())
+							visibleStartDate.isBefore(holiday.end) && visibleStartDate.plusDays(displayDays.toLong())
 								.isAfter(holiday.start)
 						}.flatMap {
 							(it.start..it.end).map { date ->
@@ -773,11 +803,14 @@ fun <T> WeekViewCompose(
 
 						WeekViewContent(
 							// Potential improvement: Map the event list by individual days to reduce the number of events passed to be rendered
-							events = events.getOrDefault(visibleStartDate, emptyList()) + holidayEvents,
+							events = events.getOrDefault(
+								if (focused != null) weekStartForDate(visibleStartDate) else visibleStartDate,
+								emptyList()
+							) + holidayEvents,
 							eventContent = eventContent,
 							currentTime = currentTime,
 							startDate = visibleStartDate,
-							numDays = numDays,
+							numDays = displayDays,
 							startTime = startTimeWithOffset,
 							endTime = endTimeWithOffset,
 							endTimeOffset = endTimeOffset,
@@ -829,6 +862,7 @@ fun <T> WeekViewCompose(
 		) {
 			datePickerDialog = false
 			datePickerDialogLastSelection = it
+			focusedDay = null
 
 			scope.launch {
 				val targetPage = (startPage + pageIndexForDate(date = it)).toInt()

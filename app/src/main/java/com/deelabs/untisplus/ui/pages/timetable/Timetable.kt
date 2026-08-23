@@ -84,6 +84,7 @@ fun Timetable(
 	val weekViewScale by viewModel.weekViewScale.collectAsStateWithLifecycle()
 	val weekViewZoomEnabled by viewModel.weekViewZoomEnabled.collectAsStateWithLifecycle()
 	val weekViewEventStyle by viewModel.weekViewEventStyle.collectAsStateWithLifecycle()
+	val numDays by viewModel.numDays.collectAsStateWithLifecycle()
 
 	DisposableEffect(LocalLifecycleOwner.current) {
 		Log.d("Timetable", "Creating TimetableViewModel")
@@ -167,9 +168,15 @@ fun Timetable(
 					}
 
 					WeekViewStyle(weekViewEventStyle) {
+						// Auto-expand the displayed week based on lessons that actually exist
+						val lessonMaxDay = events.values.flatten()
+							.maxOfOrNull { it.start.dayOfWeek.value } ?: 0
+						val displayDays = maxOf(numDays, lessonMaxDay)
+
 						WeekViewCompose(
 							events = events,
 							holidays = holidays,
+							numDays = displayDays,
 							loading = if (viewModel.loading) true else null,
 							weekLogicService = viewModel.weekLogicService,
 							onPageChange = { pageOffset ->
