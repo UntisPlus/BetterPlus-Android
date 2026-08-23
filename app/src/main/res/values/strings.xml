@@ -329,6 +329,7 @@
     <string name="preferences_timetable">Timetable</string>
     <string name="preferences_timetable_summary">Display options, item appearance</string>
     <string name="preferences_theme_color">Theme color</string>
+    <string name="preferences_theme_color_desc">Accent color used across the app. Uses your system theme color by default.</string>
     <string name="preferences_theme_color_system">System theme color</string>
     <string name="roomfinder_current_hour">%1$s, Lesson %2$s</string>
     <string name="roomfinder_current_hour_time">%1$s - %2$s</string>

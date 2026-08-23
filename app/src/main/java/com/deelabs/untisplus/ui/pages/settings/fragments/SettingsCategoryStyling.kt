@@ -202,6 +202,7 @@ fun SettingsCategoryStyling(viewModel: SettingsScreenViewModel) {
 	PreferenceGroup(stringResource(id = R.string.preference_category_styling_themes)) {
 		ColorPreference(
 			title = { Text(stringResource(R.string.preferences_theme_color)) },
+			summary = { Text(stringResource(R.string.preferences_theme_color_desc)) },
 			leadingContent = {
 				Icon(
 					painter = painterResource(R.drawable.settings_timetable_format_paint),
