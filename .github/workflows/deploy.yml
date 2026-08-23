@@ -7,6 +7,11 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+-[a-zA-Z0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+-[a-zA-Z0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and release
+        required: true
 
 permissions:
   contents: write
@@ -62,6 +67,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -72,7 +79,7 @@ jobs:
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           NOTES_ARGS="--generate-notes"
           CHANGELOG="./fastlane/metadata/android/en-US/changelogs/${TAG#v}.txt"
