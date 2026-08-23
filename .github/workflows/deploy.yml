@@ -89,5 +89,5 @@ jobs:
               --prerelease \
               --title "UntisPlus $TAG" \
               $NOTES_ARGS \
-              "outputs/gms/release/app-gms-release.apk#UntisPlus-${TAG}-gms.apk" \
-              "outputs/foss/release/app-foss-release.apk#UntisPlus-${TAG}-foss.apk"
+              "outputs/apk/gms/release/app-gms-release.apk#UntisPlus-${TAG}-gms.apk" \
+              "outputs/apk/foss/release/app-foss-release.apk#UntisPlus-${TAG}-foss.apk"
