@@ -219,7 +219,10 @@ class TimetableViewModel @Inject constructor(
 	}
 
 	fun editUser(user: User?) {
-		navigator.navigate(AppRoutes.LoginDataInput(userId = user?.id ?: -1))
+		if (user == null)
+			navigator.navigate(AppRoutes.Login)
+		else
+			navigator.navigate(AppRoutes.LoginDataInput(userId = user.id))
 	}
 
 	fun editUsers() {

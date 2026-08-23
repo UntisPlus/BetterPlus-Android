@@ -37,7 +37,8 @@ import kotlinx.coroutines.flow.Flow
 fun MainAppContent(
 	userState: UserRepository.UserState,
 	settingsFlow: Flow<UserSettings>,
-	navigator: AppNavigator
+	navigator: AppNavigator,
+	consumeApiProviderSelectionStart: () -> Boolean
 ) {
 	val settings by settingsFlow.collectAsState(initial = UserSettings.getDefaultInstance())
 
@@ -84,9 +85,13 @@ fun MainAppContent(
 
 				is UserRepository.UserState.User -> {
 					key(userState.user.id) {
+						val startDestination = remember {
+							if (consumeApiProviderSelectionStart()) AppRoutes.ApiProviderSelect
+							else AppRoutes.Timetable()
+						}
 						AppNavHost(
 							navigator = navigator,
-							startDestination = AppRoutes.Timetable()
+							startDestination = startDestination
 						)
 					}
 

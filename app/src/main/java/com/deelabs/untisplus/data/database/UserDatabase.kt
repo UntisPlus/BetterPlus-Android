@@ -30,7 +30,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 @Database(
-	version = 12,
+	version = 13,
 	entities = [
 		User::class,
 		AbsenceReasonEntity::class,
@@ -51,7 +51,8 @@ import java.time.format.DateTimeFormatter
 		AutoMigration(from = 8, to = 9),
 		AutoMigration(from = 9, to = 10),
 		AutoMigration(from = 10, to = 11, spec = MigrationSpec10to11::class),
-		AutoMigration(from = 11, to = 12, spec = MigrationSpec11to12::class)
+		AutoMigration(from = 11, to = 12, spec = MigrationSpec11to12::class),
+		AutoMigration(from = 12, to = 13)
 	]
 )
 @TypeConverters(UserConverters::class)

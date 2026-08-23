@@ -28,6 +28,9 @@ object AppRoutes {
 	data object Login
 
 	@Serializable
+	data object ApiProviderSelect
+
+	@Serializable
 	data class LoginDataInput(
 		val demoLogin: Boolean = false,
 		val profileUpdate: Boolean = false,

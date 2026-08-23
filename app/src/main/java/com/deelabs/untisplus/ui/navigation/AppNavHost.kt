@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import com.deelabs.untisplus.api.model.untis.enumeration.ElementType
 import com.deelabs.untisplus.ui.pages.infocenter.InfoCenter
 import com.deelabs.untisplus.ui.pages.login.Login
+import com.deelabs.untisplus.ui.pages.login.apiprovider.ApiProviderSelect
 import com.deelabs.untisplus.ui.pages.login.datainput.LoginDataInput
 import com.deelabs.untisplus.ui.pages.roomfinder.RoomFinder
 import com.deelabs.untisplus.ui.pages.settings.settingsNav
@@ -116,6 +117,21 @@ fun AppNavHost(
 				)
 			},
 		) { LoginDataInput() }
+
+		composable<AppRoutes.ApiProviderSelect>(
+			enterTransition = {
+				slideIntoContainer(
+					AnimatedContentTransitionScope.SlideDirection.Left,
+					animationSpec = tween(500)
+				)
+			},
+			popExitTransition = {
+				slideOutOfContainer(
+					AnimatedContentTransitionScope.SlideDirection.Right,
+					animationSpec = tween(500)
+				)
+			},
+		) { ApiProviderSelect() }
 
 		composable<AppRoutes.Timetable>(
 			typeMap = mapOf(typeOf<ElementType>() to NavType.EnumType(ElementType::class.java)),

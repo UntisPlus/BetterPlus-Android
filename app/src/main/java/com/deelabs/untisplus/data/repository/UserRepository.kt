@@ -42,6 +42,18 @@ class UserRepository @Inject constructor(
 		}
 	}
 
+	@Volatile
+	var pendingApiProviderSelection = false
+
+	fun consumePendingApiProviderSelection(): Boolean {
+		return if (pendingApiProviderSelection) {
+			pendingApiProviderSelection = false
+			true
+		} else {
+			false
+		}
+	}
+
 	fun switchUser(user: User) {
 		_userState.value = UserState.User(user)
 		CoroutineScope(Dispatchers.IO).launch {

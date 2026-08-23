@@ -97,7 +97,7 @@ fun LoginDataInput(
 					modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
 				)
 				Text(
-					text = "Please wait, BetterUntis is loading the new timetable data.\nThis may take a moment.",
+					text = "Please wait, UntisPlus is loading the new timetable data.\nThis may take a moment.",
 					style = MaterialTheme.typography.bodyMedium,
 					textAlign = TextAlign.Center,
 					modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp)
@@ -265,11 +265,13 @@ fun LoginDataInput(
 					Spacer(
 						modifier = Modifier.height(32.dp)
 					)
-					InputSwitch(
-						state = viewModel.loginData.anonymous,
-						label = { Text(stringResource(id = R.string.logindatainput_anonymous_login)) },
-						enabled = !viewModel.loading
-					)
+					AnimatedVisibility(visible = viewModel.anonymousSupported != false) {
+						InputSwitch(
+							state = viewModel.loginData.anonymous,
+							label = { Text(stringResource(id = R.string.logindatainput_anonymous_login)) },
+							enabled = !viewModel.loading
+						)
+					}
 					AnimatedVisibility(visible = viewModel.loginData.anonymous.value != true) {
 						Column {
 							InputField(
@@ -351,6 +353,12 @@ fun LoginDataInput(
 								errorText = stringResource(id = R.string.logindatainput_error_invalid_url),
 								focusManager = focusManager
 							)
+							if (viewModel.anonymousSupported == false)
+								InputSwitch(
+									state = viewModel.loginData.anonymous,
+									label = { Text(stringResource(id = R.string.logindatainput_anonymous_login)) },
+									enabled = !viewModel.loading
+								)
 						}
 					}
 

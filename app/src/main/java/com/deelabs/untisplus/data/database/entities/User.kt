@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Embedded
@@ -37,27 +38,71 @@ data class User(
 	val user: String? = null,
 	val key: String? = null,
 	val anonymous: Boolean = false,
+	@ColumnInfo(defaultValue = "0") val useUntisPlusApi: Boolean = false,
+	val customApiHost: String? = null,
 	val timeGrid: TimeGrid,
 	val masterDataTimestamp: Long,
 	val userData: UserData,
 	val settings: Settings? = null,
 	val created: Long? = null,
 ) {
+	private fun resolveApiEndpoint(url: Uri): Uri {
+		customApiHost?.trim()?.takeIf { it.isNotEmpty() }?.let { raw ->
+			normalizeApiEndpoint(raw)?.let { (scheme, authority) ->
+				return url.buildUpon()
+					.scheme(scheme)
+					.encodedAuthority(authority)
+					.build()
+			}
+		}
+		if (useUntisPlusApi)
+			return url.buildUpon()
+				.scheme("https")
+				.encodedAuthority(UNTISPLUS_API_HOST)
+				.build()
+		return url
+	}
+
 	companion object {
+		const val UNTISPLUS_API_HOST = "api-untis.deelabs.tech"
+
+		/**
+		 * Normalizes a user-provided API endpoint to a scheme/authority pair.
+		 * A missing scheme defaults to https; http is allowed for custom endpoints only.
+		 */
+		fun normalizeApiEndpoint(raw: String): Pair<String, String>? {
+			val trimmed = raw.trim()
+			if (trimmed.isEmpty()) return null
+			val withScheme = if (trimmed.contains("://")) trimmed else "https://$trimmed"
+			val uri = runCatching { withScheme.toUri() }.getOrNull() ?: return null
+			val authority = uri.encodedAuthority ?: return null
+			if (uri.host.isNullOrBlank() || authority.isBlank()) return null
+			return (uri.scheme?.lowercase() ?: "https") to authority
+		}
+
 		fun buildApiUrl(
 			apiHost: String,
 			schoolInfo: SchoolInfo? = null
 		): Uri {
-			val host = apiHost.ifBlank {
+			val raw = apiHost.ifBlank {
 				if (schoolInfo?.useMobileServiceUrlAndroid == true && !schoolInfo.mobileServiceUrl.isNullOrBlank()) schoolInfo.mobileServiceUrl
 				else schoolInfo?.serverUrl
-			}!!.toUri().host
+			}!!
 
-			return Uri.Builder()
-				.scheme("https")
-				.authority(host)
-				.appendPath("WebUntis")
-				.build()
+			return if (raw.contains("://")) {
+				val uri = raw.toUri()
+				Uri.Builder()
+					.scheme(uri.scheme ?: "https")
+					.encodedAuthority(uri.encodedAuthority)
+					.appendPath("WebUntis")
+					.build()
+			} else {
+				Uri.Builder()
+					.scheme("https")
+					.authority(raw)
+					.appendPath("WebUntis")
+					.build()
+			}
 		}
 
 		fun buildJsonRpcApiUrl(apiUrl: Uri, schoolName: String): Uri {
@@ -91,7 +136,7 @@ data class User(
 
 	val jsonRpcApiUrl: Uri by lazy {
 		val schoolName = schoolInfo?.loginName ?: apiHost.toUri().getQueryParameter("school") ?: ""
-		buildJsonRpcApiUrl(apiUrl, schoolName)
+		resolveApiEndpoint(buildJsonRpcApiUrl(apiUrl, schoolName))
 	}
 
 	val restApiUrl: Uri by lazy {

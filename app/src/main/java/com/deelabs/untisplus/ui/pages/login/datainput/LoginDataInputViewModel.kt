@@ -21,19 +21,24 @@ import com.deelabs.untisplus.api.model.response.UntisErrorCode
 import com.deelabs.untisplus.api.model.response.UserDataResult
 import com.deelabs.untisplus.api.model.untis.MasterData
 import com.deelabs.untisplus.api.model.untis.SchoolInfo
+import com.deelabs.untisplus.api.model.untis.enumeration.ElementType
 import com.deelabs.untisplus.api.model.untis.masterdata.TimeGrid
 import com.deelabs.untisplus.data.database.entities.User
 import com.deelabs.untisplus.data.database.entities.User.Companion.buildApiUrl
 import com.deelabs.untisplus.data.database.entities.UserDao
+import com.deelabs.untisplus.data.repository.TimetableRepository
 import com.deelabs.untisplus.data.repository.UserRepository
+import com.deelabs.untisplus.services.WeekLogicService
 import com.deelabs.untisplus.helpers.ErrorMessageDictionary
 import com.deelabs.untisplus.helpers.SerializationUtils.getJSON
 import com.deelabs.untisplus.services.CodeScanService
 import com.deelabs.untisplus.ui.navigation.AppNavigator
 import com.deelabs.untisplus.ui.navigation.AppRoutes
 import com.deelabs.untisplus.ui.pages.ActivityViewModel
+import crocodile8.universal_cache.FromCache
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -45,6 +50,8 @@ class LoginDataInputViewModel @Inject constructor(
 	private val userDao: UserDao,
 	private val schoolSearchApi: SchoolSearchApi,
 	private val userDataApi: UserDataApi,
+	private val timetableRepository: TimetableRepository,
+	private val weekLogicService: WeekLogicService,
 	private val navigator: AppNavigator,
 	private val userRepository: UserRepository,
 	private val codeScanService: CodeScanService,
@@ -86,6 +93,11 @@ class LoginDataInputViewModel @Inject constructor(
 	val showProfileUpdate = args.profileUpdate
 
 	var schoolIdLocked by mutableStateOf(false)
+
+	var anonymousSupported by mutableStateOf<Boolean?>(null)
+		private set
+
+	private var anonymousSupportJob: Job? = null
 
 	val schoolNameValid = derivedStateOf {
 		loginData.schoolName.value?.isNotEmpty() ?: false
@@ -133,6 +145,7 @@ class LoginDataInputViewModel @Inject constructor(
 		schoolInfoFromSearch?.let {
 			loginData.schoolName.value = schoolInfoFromSearch.loginName
 			schoolIdLocked = true
+			checkAnonymousSupport(it)
 		}
 
 		if (showProfileUpdate) {
@@ -201,8 +214,14 @@ class LoginDataInputViewModel @Inject constructor(
 			withContext(Dispatchers.IO) {
 				val userId = saveUser(user, userData.masterData)
 				userRepository.switchUser(userId)
-				navigator.navigate(AppRoutes.Timetable()) {
-					popUpTo(0) // Pop all previous routes
+				if (!isExistingUser && !args.demoLogin) {
+					// The user-state change swaps the NavHost; signal it to start on the provider page.
+					preloadTimetable()
+					userRepository.pendingApiProviderSelection = true
+				} else {
+					navigator.navigate(AppRoutes.Timetable()) {
+						popUpTo(0) // Pop all previous routes
+					}
 				}
 			}
 		} catch (e: UntisApiException) {
@@ -241,12 +260,36 @@ class LoginDataInputViewModel @Inject constructor(
 			if (loginData.anonymous.value != true) loginData.username.value else null,
 			if (loginData.anonymous.value != true) appSharedSecret else null,
 			loginData.anonymous.value == true,
+			loginData.useUntisPlusApi.value,
+			loginData.customApiHost.value,
 			userData.masterData.timeGrid ?: TimeGrid.generateDefault(),
 			userData.masterData.timeStamp,
 			userData.userData,
 			userData.settings,
 		)
 		return user
+	}
+
+	private fun preloadTimetable() {
+		viewModelScope.launch {
+			try {
+				val user = userRepository.currentUser!!
+				val element = user.userData.getPeriodElement()
+					?: user.userData.getFallbackPeriodElements().firstOrNull() ?: return@launch
+				val startDate = weekLogicService.currentWeekStartDate()
+				timetableRepository.timetableSource().get(
+					params = TimetableRepository.TimetableParams(
+						elementId = element.id,
+						elementType = element.type,
+						startDate = startDate,
+					),
+					fromCache = FromCache.CACHED_THEN_LOAD,
+					additionalKey = user.id
+				).collect {}
+			} catch (e: Exception) {
+				Log.w(LoginDataInputViewModel::class.simpleName, "Timetable preload failed", e)
+			}
+		}
 	}
 
 	private suspend fun saveUser(user: User, masterData: MasterData): Long {
@@ -339,6 +382,26 @@ class LoginDataInputViewModel @Inject constructor(
 	fun selectSchool(it: SchoolInfo) {
 		loginData.schoolName.value = it.loginName
 		searchMode = false
+		checkAnonymousSupport(it)
+	}
+
+	private fun checkAnonymousSupport(schoolInfo: SchoolInfo?) {
+		if (schoolInfo == null) return
+		anonymousSupportJob?.cancel()
+		anonymousSupported = null
+		anonymousSupportJob = viewModelScope.launch(Dispatchers.IO) {
+			anonymousSupported = try {
+				val apiHost = if (advanced) loginData.apiUrl.value.orEmpty() else ""
+				val untisApiUrl = User.buildJsonRpcApiUrl(
+					buildApiUrl(apiHost, schoolInfo),
+					schoolInfo.loginName
+				).toString()
+				userDataApi.getUserData(untisApiUrl, null, "")
+				true
+			} catch (_: Exception) {
+				false
+			}
+		}
 	}
 
 	class LoginData(
@@ -356,6 +419,8 @@ class LoginDataInputViewModel @Inject constructor(
 		val secondFactor = mutableStateOf<String?>(null)
 		val apiUrl = mutableStateOf(initialApiUrl)
 		val skipAppSecret = mutableStateOf<Boolean?>(null)
+		var useUntisPlusApi = mutableStateOf(false)
+		val customApiHost = mutableStateOf<String?>(null)
 		var storedPassword: String? = null
 
 		fun loadFromUser(user: User) {
@@ -364,6 +429,8 @@ class LoginDataInputViewModel @Inject constructor(
 			anonymous.value = user.anonymous
 			username.value = user.user
 			apiUrl.value = user.apiHost
+			useUntisPlusApi.value = user.useUntisPlusApi
+			customApiHost.value = user.customApiHost
 			storedPassword = user.key
 		}
 	}
