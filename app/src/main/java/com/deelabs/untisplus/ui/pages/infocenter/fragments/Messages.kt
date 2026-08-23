@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -115,6 +116,7 @@ fun InfoCenterMessages(viewModel: InfoCenterViewModel = hiltViewModel()) {
 											MessagePreview(
 												subject = message.subject,
 												body = message.body,
+												fullBody = true,
 												attachments = message.attachments,
 												onShowAttachments = { attachmentsDialog = message.attachments },
 											)
@@ -169,9 +171,11 @@ fun InfoCenterMessages(viewModel: InfoCenterViewModel = hiltViewModel()) {
 									}
 								}
 							},
-							onFailure = {
-								item {
-									InfoCenterError(it)
+							onFailure = { throwable ->
+								if (state.messagesOfDay.getOrNull()?.isEmpty() == true) {
+									item {
+										InfoCenterError(throwable)
+									}
 								}
 							}
 						)
@@ -250,21 +254,22 @@ private fun SharedTransitionScope.MessageDetails(
 									attachments = null
 								)
 
-								Text(
-									modifier = Modifier
-										.fillMaxWidth()
-										.padding(horizontal = 16.dp)
-										.verticalScroll(rememberScrollState())
-										.placeholder(
-											visible = messageContent == null,
-											color = PlaceholderDefaults.color(),
-											shape = RoundedCornerShape(4.dp),
-											highlight = PlaceholderHighlight.shimmer(
-												PlaceholderDefaults.shimmerHighlightColor()
-											)
-										),
-									text = messageContent ?: ""
-								)
+							HtmlText(
+								html = messageContent ?: "",
+								color = MaterialTheme.colorScheme.onSurface,
+								modifier = Modifier
+									.fillMaxWidth()
+									.padding(horizontal = 16.dp)
+									.verticalScroll(rememberScrollState())
+									.placeholder(
+										visible = messageContent == null,
+										color = PlaceholderDefaults.color(),
+										shape = RoundedCornerShape(4.dp),
+										highlight = PlaceholderHighlight.shimmer(
+											PlaceholderDefaults.shimmerHighlightColor()
+										)
+									)
+							)
 
 								if (canReply || canDelete) {
 									Row(
@@ -322,6 +327,7 @@ private fun SharedTransitionScope.MessagePreview(
 	subject: String,
 	modifier: Modifier = Modifier,
 	body: String? = null,
+	fullBody: Boolean = false,
 	sender: String? = null,
 	imageUrl: String? = null,
 	time: LocalDateTime? = null,
@@ -334,31 +340,27 @@ private fun SharedTransitionScope.MessagePreview(
 		Column {
 			if (subject.isNotBlank()) {
 				Text(
-					text = subject,
+					text = subject.htmlToPlainText(),
 					maxLines = 1,
 					overflow = TextOverflow.Ellipsis,
 					fontWeight = if (!read) FontWeight.Bold else null,
 					color = MaterialTheme.colorScheme.onSurface
 				)
 				body?.let {
-					Text(
-						text = body,
-						maxLines = 1,
-						overflow = TextOverflow.Ellipsis,
-						fontWeight = if (!read) FontWeight.Bold else null,
-						color = MaterialTheme.colorScheme.onSurfaceVariant
-					)
+					if (fullBody) {
+						HtmlText(html = it, color = textColor)
+					} else {
+						Text(
+							text = it.htmlToPlainText(),
+							maxLines = 1,
+							overflow = TextOverflow.Ellipsis,
+							fontWeight = if (!read) FontWeight.Bold else null,
+							color = MaterialTheme.colorScheme.onSurfaceVariant
+						)
+					}
 				}
 			} else {
-				body?.let {
-					AndroidView(factory = { context ->
-						TextView(context).apply {
-							setTextColor(textColor.toArgb())
-						}
-					}, update = {
-						it.text = HtmlCompat.fromHtml(body, HtmlCompat.FROM_HTML_MODE_COMPACT)
-					})
-				}
+				body?.let { HtmlText(html = it, color = textColor) }
 			}
 		}
 	}
@@ -444,3 +446,24 @@ sealed interface MessagesUiState {
 				&& messages.getOrDefault(emptyList()).isEmpty()
 	}
 }
+
+@Composable
+private fun HtmlText(html: String, color: Color, modifier: Modifier = Modifier) {
+	AndroidView(
+		modifier = modifier,
+		factory = { context ->
+			TextView(context).apply {
+				setTextColor(color.toArgb())
+			}
+		},
+		update = {
+			it.text = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_COMPACT)
+		}
+	)
+}
+
+private fun String.htmlToPlainText(): String =
+	HtmlCompat.fromHtml(this, HtmlCompat.FROM_HTML_MODE_COMPACT)
+		.toString()
+		.replace(Regex("\\s+"), " ")
+		.trim()

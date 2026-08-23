@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -56,7 +57,10 @@ class InfoCenterViewModel @Inject constructor(
 
 	val messagesState: StateFlow<MessagesUiState> = combine(
 		getMessagesOfDay(),
-		getMessages(),
+		if (userRepository.currentUser!!.anonymous)
+			flowOf(Result.success(emptyList()))
+		else
+			getMessages(),
 		MessagesUiState::Success
 	).stateIn(
 		scope = viewModelScope,
