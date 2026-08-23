@@ -18,11 +18,6 @@ plugins {
 	alias(libs.plugins.protobuf)
 }
 
-// Auto-generates a new version code every minute
-fun generateVersionCode(): Int {
-	return (Date().time / 1000 / 60).toInt()
-}
-
 android {
 	compileSdk = 35
 	namespace = "com.deelabs.untisplus"
@@ -35,8 +30,8 @@ android {
 		applicationId = "com.deelabs.untisplus"
 		minSdk = 21
 		targetSdk = 35
-		versionCode = generateVersionCode()
-		versionName = "5.0.0-beta05"
+		versionCode = 1
+		versionName = "v1.0.0"
 		vectorDrawables.useSupportLibrary = true
 		testInstrumentationRunner = "com.deelabs.untisplus.HiltTestRunner"
 
