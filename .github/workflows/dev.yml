@@ -1,16 +1,23 @@
 name: Dev Build
 
 on:
-  push:
-    branches: [dev]
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: What to build
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - debug-and-release
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build and publish debug APK
+    name: Build and publish to rolling dev release
     runs-on: ubuntu-latest
 
     steps:
@@ -24,8 +31,6 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
 
       - name: Decode keystore
         env:
@@ -41,15 +46,31 @@ jobs:
           printf 'keystorePassword=%s\nkeyReleasePassword=%s\nkeyDebugPassword=%s\n' \
             "$KEYSTORE_PASSWORD" "$KEY_RELEASE_PASSWORD" "$KEY_DEBUG_PASSWORD" > app/signing.properties
 
-      - name: Assemble debug APK
-        run: ./gradlew assembleDebug
+      - name: Assemble selected variants
+        env:
+          BUILD_TYPE: ${{ inputs.build_type }}
+        run: |
+          if [[ "$BUILD_TYPE" == "debug-and-release" ]]; then
+            ./gradlew assembleDebug assembleRelease
+          else
+            ./gradlew assembleDebug
+          fi
 
       - name: Publish to rolling dev release
         env:
           GH_TOKEN: ${{ github.token }}
+          BUILD_TYPE: ${{ inputs.build_type }}
         run: |
           cp app/build/outputs/apk/debug/app-debug.apk UntisPlus-dev-debug.apk
           gh release view dev --json tagName > /dev/null 2>&1 || \
               gh release create dev --prerelease --title "UntisPlus Dev (rolling)" \
-                  --notes "Latest debug build from the \`dev\` branch, updated automatically on every push. Installs alongside stable builds (app id ends in \`.debug\`)."
-          gh release upload dev UntisPlus-dev-debug.apk --clobber
+                  --notes "Manual builds from the \`dev\` branch. Installs alongside stable builds (debug app id ends in \`.debug\`)."
+          for asset in UntisPlus-dev-debug.apk UntisPlus-dev-release.apk; do
+              gh release delete-asset dev "$asset" --yes > /dev/null 2>&1 || true
+          done
+          if [[ "$BUILD_TYPE" == "debug-and-release" ]]; then
+              cp app/build/outputs/apk/release/app-release.apk UntisPlus-dev-release.apk
+              gh release upload dev UntisPlus-dev-debug.apk UntisPlus-dev-release.apk --clobber
+          else
+              gh release upload dev UntisPlus-dev-debug.apk --clobber
+          fi

@@ -34,8 +34,8 @@ Indentation is tabs for `.kt`/`.gradle`/`.xml` (`.editorconfig`) — match exist
 
 ## Workflow & releases
 - Branch model: all development happens on `dev`; `master` holds stable code only. **PRs must target `dev`, never `master`.**
-- Releases: tag pushes or manual dispatch (`gh workflow run deploy.yml -f tag=<tag>`) build a signed release APK/AAB and publish it to GitHub Releases (`.github/workflows/deploy.yml`). Note: tag-push triggers are currently unreliable on this repo (transferred-repo event glitch) — dispatch works.
-- Dev builds: every push to `dev` builds a signed debug APK and publishes it to the rolling `dev` pre-release (`.github/workflows/dev.yml`); debug app id is suffixed `.debug` so it installs alongside release builds.
+- Releases: every push to `master` auto-publishes a GitHub Release named after `versionName` from `app/build.gradle.kts` (`.github/workflows/deploy.yml`; dispatch accepts a version override). Bump `versionName` when a new release is wanted.
+- Dev builds: manual only — `gh workflow run dev.yml -f build_type=debug` or `-f build_type=debug-and-release` — published to the rolling `dev` pre-release (`.github/workflows/dev.yml`). Debug app id is suffixed `.debug` so it installs alongside release builds.
 - `versionCode` is regenerated per-minute at build time; only the F-Droid flow pins it.
 
 ## Gotchas

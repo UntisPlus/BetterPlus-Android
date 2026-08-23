@@ -2,23 +2,19 @@ name: Release App
 
 on:
   push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
-      - "[0-9]+.[0-9]+.[0-9]+-[a-zA-Z0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+-[a-zA-Z0-9]+"
+    branches: [master]
   workflow_dispatch:
     inputs:
-      tag:
-        description: Existing tag to build and release
-        required: true
+      version:
+        description: Override version (defaults to versionName from app/build.gradle.kts)
+        required: false
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build release APKs
+  release:
+    name: Build and publish release
     runs-on: ubuntu-latest
 
     steps:
@@ -32,8 +28,6 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: false
 
       - name: Decode keystore
         env:
@@ -49,44 +43,27 @@ jobs:
           printf 'keystorePassword=%s\nkeyReleasePassword=%s\nkeyDebugPassword=%s\n' \
             "$KEYSTORE_PASSWORD" "$KEY_RELEASE_PASSWORD" "$KEY_DEBUG_PASSWORD" > app/signing.properties
 
-      - name: Assemble release APK and bundle
-        run: ./gradlew assembleRelease bundleRelease
+      - name: Determine version
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          if [[ -n "$VERSION_INPUT" ]]; then
+            VERSION="$VERSION_INPUT"
+          else
+            VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Releasing UntisPlus $VERSION"
 
-      - name: Upload release files
-        uses: actions/upload-artifact@v4
-        with:
-          name: untisplus-release
-          path: |
-            app/build/outputs/apk/*/release/*.apk
-            app/build/outputs/bundle/release/*.aab
+      - name: Assemble release APK
+        run: ./gradlew assembleRelease
 
-  github-release:
-    name: Create Release on GitHub
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: untisplus-release
-          path: outputs
-
-      - name: Create release
+      - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          NOTES_ARGS="--generate-notes"
-          CHANGELOG="./fastlane/metadata/android/en-US/changelogs/${TAG#v}.txt"
-          if [[ -f "$CHANGELOG" ]]; then NOTES_ARGS="--notes-file $CHANGELOG"; fi
-
-          gh release create "$TAG" \
-              --prerelease \
-              --title "UntisPlus $TAG" \
-              $NOTES_ARGS \
-              "outputs/apk/release/app-release.apk#UntisPlus-${TAG}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "UntisPlus-${VERSION}.apk"
+          gh release view "$VERSION" --json tagName > /dev/null 2>&1 || \
+              gh release create "$VERSION" --title "UntisPlus $VERSION" \
+                  --generate-notes --latest
+          gh release upload "$VERSION" "UntisPlus-${VERSION}.apk" --clobber
