@@ -10,13 +10,13 @@ UntisPlus (`com.deelabs.untisplus`): fork of BetterUntis, an Android client for 
 Toolchain: JVM toolchain pinned to 21 in all modules (bytecode target stays 17; foojay auto-provisioning enabled in `settings.gradle.kts`). The daemon JVM is pinned via `gradle/gradle-daemon-jvm.properties` (version 21, any vendor; foojay download URLs baked in as fallback). Gradle wrapper 8.13; AGP/Kotlin versions in `gradle/libs.versions.toml` (all dependencies go through this catalog).
 
 ## Commands
-Product flavors are `gms` and `foss` — app tasks always need a flavor+variant suffix:
+Fully FOSS — no Google Play Services anywhere (QR scanning uses ZXing embedded). No product flavors; build types are `debug` and `release` (debug appId suffixed `.debug`):
 
 ```sh
-./gradlew assembleGmsDebug                  # build (CI matrix: Gms/Foss × Debug/Release)
-./gradlew :app:testGmsDebugUnitTest         # unit tests (single class: --tests "com.deelabs.untisplus.helpers.TextUtilsTest")
+./gradlew assembleDebug                     # build (CI matrix: Debug/Release)
+./gradlew :app:testDebugUnitTest            # unit tests (single class: --tests "com.deelabs.untisplus.helpers.TextUtilsTest")
 ./gradlew :api:test                         # api module tests (plain JVM)
-./gradlew connectedGmsDebugAndroidTest      # instrumented tests, needs device/emulator
+./gradlew connectedDebugAndroidTest         # instrumented tests, needs device/emulator
 ```
 
 Indentation is tabs for `.kt`/`.gradle`/`.xml` (`.editorconfig`) — match existing files.

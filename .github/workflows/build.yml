@@ -7,13 +7,12 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.variant }} APKs (${{ matrix.target }})
+    name: Build ${{ matrix.variant }} APK
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         variant: [ debug, release ]
-        target: [ Gms, Foss ]
 
     steps:
       - uses: actions/checkout@v4
@@ -43,18 +42,18 @@ jobs:
           printf 'keystorePassword=%s\nkeyReleasePassword=%s\nkeyDebugPassword=%s\n' \
             "$KEYSTORE_PASSWORD" "$KEY_RELEASE_PASSWORD" "$KEY_DEBUG_PASSWORD" > app/signing.properties
 
-      - name: Assemble ${{ matrix.target }} debug APK
+      - name: Assemble debug APK
         if: ${{ matrix.variant == 'debug' }}
-        run: ./gradlew assemble${{ matrix.target }}Debug
+        run: ./gradlew assembleDebug
 
-      - name: Assemble ${{ matrix.target }} release APK
+      - name: Assemble release APK
         if: ${{ matrix.variant == 'release' }}
-        run: ./gradlew assemble${{ matrix.target }}Release
+        run: ./gradlew assembleRelease
 
-      - name: Upload ${{ matrix.target }} ${{ matrix.variant }} APKs
+      - name: Upload ${{ matrix.variant }} APK
         uses: actions/upload-artifact@v4
         with:
-          name: untisplus-${{ matrix.target }}-${{ matrix.variant }}
+          name: untisplus-${{ matrix.variant }}
           path: |
             app/build/outputs/apk/*/${{ matrix.variant }}/*.apk
             app/build/outputs/apk/*/${{ matrix.variant }}/output-metadata.json

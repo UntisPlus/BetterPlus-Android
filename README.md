@@ -22,16 +22,15 @@ No public releases yet. Build it yourself (see below) or grab a debug APK from C
 Requirements: Android Studio or the command line; the Gradle build pins a Java 21 toolchain and provisions it automatically if missing.
 
 ```sh
-./gradlew assembleGmsDebug        # build with Google Play services flavor
-./gradlew assembleFossDebug       # build the FOSS variant (no proprietary dependencies)
+./gradlew assembleDebug           # fully FOSS build (no proprietary dependencies)
 ```
 
-Product flavors: `gms` (default) and `foss`. Debug builds use the application id suffix `.debug`, so debug and release builds install alongside each other too.
+Debug builds use the application id suffix `.debug`, so debug and release builds install alongside each other too.
 
 Run unit tests:
 
 ```sh
-./gradlew :app:testGmsDebugUnitTest
+./gradlew :app:testDebugUnitTest
 ```
 
 ## Contact

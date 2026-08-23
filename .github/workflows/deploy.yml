@@ -49,8 +49,8 @@ jobs:
           printf 'keystorePassword=%s\nkeyReleasePassword=%s\nkeyDebugPassword=%s\n' \
             "$KEYSTORE_PASSWORD" "$KEY_RELEASE_PASSWORD" "$KEY_DEBUG_PASSWORD" > app/signing.properties
 
-      - name: Assemble release APKs and bundle
-        run: ./gradlew assembleGmsRelease assembleFossRelease bundleGmsRelease
+      - name: Assemble release APK and bundle
+        run: ./gradlew assembleRelease bundleRelease
 
       - name: Upload release files
         uses: actions/upload-artifact@v4
@@ -58,7 +58,7 @@ jobs:
           name: untisplus-release
           path: |
             app/build/outputs/apk/*/release/*.apk
-            app/build/outputs/bundle/gmsRelease/*.aab
+            app/build/outputs/bundle/release/*.aab
 
   github-release:
     name: Create Release on GitHub
@@ -89,5 +89,4 @@ jobs:
               --prerelease \
               --title "UntisPlus $TAG" \
               $NOTES_ARGS \
-              "outputs/apk/gms/release/app-gms-release.apk#UntisPlus-${TAG}-gms.apk" \
-              "outputs/apk/foss/release/app-foss-release.apk#UntisPlus-${TAG}-foss.apk"
+              "outputs/apk/release/app-release.apk#UntisPlus-${TAG}.apk"

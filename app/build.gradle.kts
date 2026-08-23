@@ -23,8 +23,6 @@ fun generateVersionCode(): Int {
 	return (Date().time / 1000 / 60).toInt()
 }
 
-val gmsImplementation: Configuration by configurations.creating
-
 android {
 	compileSdk = 35
 	namespace = "com.deelabs.untisplus"
@@ -122,18 +120,6 @@ android {
 	lint {
 		disable += "MissingTranslation"
 	}
-
-	flavorDimensions += "dependencies"
-	productFlavors {
-		create("gms") {
-			isDefault = true
-			dimension = "dependencies"
-		}
-
-		create("foss") {
-			dimension = "dependencies"
-		}
-	}
 }
 
 kotlin {
@@ -226,8 +212,6 @@ dependencies {
 	implementation(libs.sapuseven.protostore)
 	implementation(libs.fornewid.placeholder.material3)
 	implementation(libs.fornewid.material.motion.compose.core)
-
-	gmsImplementation(libs.gms.code.scanner)
 
 	coreLibraryDesugaring(libs.desugar.jdk.libs)
 

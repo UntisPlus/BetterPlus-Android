@@ -13,7 +13,7 @@ adb exec-out run-as com.deelabs.untisplus.debug rm -r $SCREENSHOTS_BASE_PATH
 rm -r screenshots/*
 
 # Run Android tests to generate screenshots
-./gradlew -PtestInstrumentationRunnerArguments.package=com.deelabs.untisplus.screenshots connectedGmsDebugAndroidTest
+./gradlew -PtestInstrumentationRunnerArguments.package=com.deelabs.untisplus.screenshots connectedDebugAndroidTest
 
 # Copy screenshots from device to local
 [ -d screenshots/. ] || mkdir screenshots
