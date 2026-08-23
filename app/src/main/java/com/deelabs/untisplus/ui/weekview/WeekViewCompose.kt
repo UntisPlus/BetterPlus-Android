@@ -635,12 +635,13 @@ fun <T> WeekViewCompose(
 
 	val onHeaderDayClick: (LocalDate) -> Unit = { day ->
 		scope.launch {
-			if (focusedDay == day) {
+			if (focusedDay != null) {
+				// Already in day view - any header tap returns to the week containing the visible day
 				focusedDay = null
 				pagerState.animateScrollToPage((startPage + pageIndexForDate(day)).toInt())
 			} else {
 				focusedDay = day
-				pagerState.scrollToPage(startPage + ChronoUnit.DAYS.between(LocalDate.now(), day).toInt())
+				pagerState.scrollToPage(startPage) // Page offset 0 shows the focused day itself
 			}
 		}
 	}
