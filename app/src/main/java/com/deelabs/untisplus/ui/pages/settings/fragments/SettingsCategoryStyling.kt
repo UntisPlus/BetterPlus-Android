@@ -1,6 +1,7 @@
 package com.deelabs.untisplus.ui.pages.settings.fragments
 
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import com.deelabs.untisplus.ui.weekview.DefaultLessonColors
 fun SettingsCategoryStyling(viewModel: SettingsScreenViewModel) {
 	// *past colors are currently disabled as an "experiment" to simplify color preferences
 
+	val systemDarkTheme = isSystemInDarkTheme()
 	val defaultThemeColor = MaterialTheme.colorScheme.primary
 	val defaultBackgroundRegular = DefaultLessonColors.Regular
 	//val defaultBackgroundRegularPast = EventColor.ThemePrimary.pastColor()
@@ -242,8 +244,7 @@ fun SettingsCategoryStyling(viewModel: SettingsScreenViewModel) {
 			},
 			enabledCondition = { it.darkTheme != DarkTheme.LIGHT },
 			settingsRepository = viewModel.userSettingsRepository,
-			value = { it.darkThemeOled },
-			onValueChange = { darkThemeOled = it }
+			value = { if (it.hasDarkThemeOled()) it.darkThemeOled else systemDarkTheme },			onValueChange = { darkThemeOled = it }
 		)
 	}
 }

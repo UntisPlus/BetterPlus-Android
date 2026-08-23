@@ -46,7 +46,7 @@ fun MainAppContent(
 		DarkTheme.LIGHT -> ThemeMode.AlwaysLight
 		else -> ThemeMode.FollowSystem
 	}
-	val darkThemeOled by remember { derivedStateOf { settings.darkThemeOled } }
+	val darkThemeOled by remember { derivedStateOf { settings.darkThemeOled.takeIf { settings.hasDarkThemeOled() } } }
 	val themeColor by remember { derivedStateOf { if (settings.hasThemeColor()) Color(settings.themeColor) else null } }
 
 	AppTheme(darkTheme, darkThemeOled, themeColor) {

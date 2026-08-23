@@ -38,7 +38,7 @@ private fun setSystemUiColor(
 @Composable
 fun AppTheme(
 	darkTheme: ThemeMode = ThemeMode.FollowSystem,
-	darkThemeOled: Boolean = false,
+	darkThemeOled: Boolean? = null,
 	themeColor: Color? = null,
 	systemUiController: SystemUiController? = rememberSystemUiController(),
 	content: @Composable () -> Unit
@@ -60,7 +60,7 @@ fun AppTheme(
 		isDarkTheme -> Scheme.dark((themeColor ?: defaultThemeColor).toArgb()).toColorScheme()
 		else -> Scheme.light((themeColor ?: defaultThemeColor).toArgb()).toColorScheme()
 	}.run {
-		if (isDarkTheme && darkThemeOled)
+		if (isDarkTheme && (darkThemeOled ?: isSystemInDarkTheme()))
 			copy(background = Color.Black, surface = Color.Black)
 		else
 			this

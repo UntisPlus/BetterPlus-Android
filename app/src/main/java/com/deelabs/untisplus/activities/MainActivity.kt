@@ -77,8 +77,8 @@ class MainActivity : ComponentActivity() {
 			}.collectAsState(ThemeMode.FollowSystem)
 
 			val darkThemeOled by userSettingsRepository.getSettings().map {
-				it.darkThemeOled
-			}.collectAsState(false)
+				it.darkThemeOled.takeIf { _ -> it.hasDarkThemeOled() }
+			}.collectAsState(null)
 
 			val themeColor by userSettingsRepository.getSettings().map {
 				if (it.customThemeColor) Color(it.themeColor) else null
