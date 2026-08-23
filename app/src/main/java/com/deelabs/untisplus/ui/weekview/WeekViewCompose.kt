@@ -625,12 +625,15 @@ fun <T> WeekViewCompose(
 	val startPage = Int.MAX_VALUE / 2
 	val pagerState = rememberPagerState(initialPage = startPage) { Int.MAX_VALUE }
 
+	// Page offset zero corresponds to this date; must be used for all page index calculations
+	val pageOrigin = weekLogicService.currentWeekStartDate()
+
 	// Day focus mode: when set, only this day is rendered full-width (tap the day header again to leave)
 	var focusedDay by remember { mutableStateOf<LocalDate?>(null) }
 
 	fun effectivePageOffset(rawOffset: Int): Int {
 		val focused = focusedDay ?: return rawOffset
-		return pageIndexForDate(focused.plusDays(rawOffset.toLong())).toInt()
+		return pageIndexForDate(focused.plusDays(rawOffset.toLong()), displayOrigin = pageOrigin).toInt()
 	}
 
 	val onHeaderDayClick: (LocalDate) -> Unit = { day ->
@@ -638,7 +641,7 @@ fun <T> WeekViewCompose(
 			if (focusedDay != null) {
 				// Already in day view - any header tap returns to the week containing the visible day
 				focusedDay = null
-				pagerState.animateScrollToPage((startPage + pageIndexForDate(day)).toInt())
+				pagerState.animateScrollToPage((startPage + pageIndexForDate(day, displayOrigin = pageOrigin)).toInt())
 			} else {
 				focusedDay = day
 				pagerState.scrollToPage(startPage) // Page offset 0 shows the focused day itself
@@ -866,7 +869,7 @@ fun <T> WeekViewCompose(
 			focusedDay = null
 
 			scope.launch {
-				val targetPage = (startPage + pageIndexForDate(date = it)).toInt()
+				val targetPage = (startPage + pageIndexForDate(date = it, displayOrigin = pageOrigin)).toInt()
 				pagerState.animateScrollToPage(targetPage)
 			}
 		}

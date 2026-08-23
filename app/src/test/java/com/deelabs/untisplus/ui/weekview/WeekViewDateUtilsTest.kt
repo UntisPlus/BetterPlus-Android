@@ -57,6 +57,29 @@ internal class WeekViewDateUtilsTest {
 	@ParameterizedTest
 	@ValueSource(longs = [-5, -1, 0, 1, 2, 5, 100])
 	fun startDateForPageIndex_pageIndexForDate_isIsomorphic(pageIndex: Long) {
-		assertEquals(pageIndex, pageIndexForDate(startDateForPageIndex(pageIndex)))
+		assertEquals(pageIndex, pageIndexForDate(startDateForPageIndex(pageIndex, clock), clock))
+	}
+
+	@Test
+	fun pageIndexForDate_weekendOrigin_skipsToNextWeek() {
+		// Today is Sunday - the display origin is next Monday, matching WeekLogicService
+		val sunday = LocalDate.parse("2026-08-23")
+		val clockSunday = Clock.fixed(sunday.atStartOfDay(ZoneId.of("UTC")).toInstant(), ZoneId.of("UTC"))
+		val originNextMonday = sunday.plusDays(1) // Monday of next week
+
+		assertEquals(0, pageIndexForDate(originNextMonday, clockSunday)) // next Monday = current page
+		assertEquals(
+			-1,
+			pageIndexForDate(originNextMonday.minusWeeks(1), clockSunday)
+		) // the week before the skipped one
+		assertEquals(
+			-1,
+			pageIndexForDate(LocalDate.parse("2026-08-18"), clockSunday)
+		) // picking a day of the skipped week returns to it
+		assertEquals(
+			0,
+			pageIndexForDate(LocalDate.parse("2026-08-22"), clockSunday)
+		) // Saturday of the skipped week jumps forward (defaultToNext)
+		assertEquals(1, pageIndexForDate(originNextMonday.plusWeeks(1), clockSunday))
 	}
 }

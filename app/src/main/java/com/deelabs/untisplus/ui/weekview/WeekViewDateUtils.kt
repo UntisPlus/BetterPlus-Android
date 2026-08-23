@@ -8,7 +8,9 @@ import java.time.temporal.WeekFields
 
 /**
  * Calculates the relative page index corresponding to a date.
- * The page index for today will always be `0`.
+ *
+ * Page indices are relative to the current display origin (see [displayOrigin]),
+ * which skips to the next week on days past the displayed weekdays (e.g. weekends).
  *
  * @param date The date to calculate the page index for
  * @param clock The clock to use for the current date
@@ -16,7 +18,10 @@ import java.time.temporal.WeekFields
  * @param weekLength The number of days displayed per page
  * @param defaultToNext Whether to return the next or the previous week if the specified [date] isn't visible
  * (e.g. for weekends when only week days are displayed)
- * @return The page index relative to the page corresponding to today
+ * @param displayOrigin The week start the page indices are relative to.
+ * Defaults to the week containing today, skipping to the next week if today lies past [weekLength].
+ * Must match what the pager uses as its page offset zero ([WeekLogicService.currentWeekStartDate]).
+ * @return The page index relative to the page corresponding to the display origin
  * @see startDateForPageIndex
  */
 internal fun pageIndexForDate(
@@ -25,13 +30,19 @@ internal fun pageIndexForDate(
 	firstDayOfWeek: DayOfWeek = DayOfWeek.MONDAY,
 	weekLength: Int = 5,
 	defaultToNext: Boolean = true,
+	displayOrigin: LocalDate? = null,
 ): Long {
-	val weeks = ChronoUnit.WEEKS.between(
-		weekStartForDate(LocalDate.now(clock), firstDayOfWeek), weekStartForDate(date, firstDayOfWeek)
-	)
+	val origin = displayOrigin ?: run {
+		val today = LocalDate.now(clock)
+		val start = weekStartForDate(today, firstDayOfWeek)
+		if (start.plusDays(weekLength.toLong() - 1).isBefore(today)) start.plusWeeks(1) else start
+	}
+
+	val targetWeekStart = weekStartForDate(date, firstDayOfWeek)
+	val weeks = ChronoUnit.WEEKS.between(origin, targetWeekStart)
 
 	return if (ChronoUnit.DAYS.between(
-			weekStartForDate(date, firstDayOfWeek),
+			targetWeekStart,
 			date
 		) >= weekLength && defaultToNext
 	) weeks + 1
