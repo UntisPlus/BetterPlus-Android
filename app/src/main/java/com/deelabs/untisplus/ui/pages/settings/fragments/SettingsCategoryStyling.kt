@@ -18,20 +18,20 @@ import com.deelabs.untisplus.R
 import com.deelabs.untisplus.data.repository.withDefault
 import com.deelabs.untisplus.data.settings.model.DarkTheme
 import com.deelabs.untisplus.ui.pages.settings.SettingsScreenViewModel
-import com.deelabs.untisplus.ui.weekview.EventStyle
+import com.deelabs.untisplus.ui.weekview.DefaultLessonColors
 
 @Composable
 fun SettingsCategoryStyling(viewModel: SettingsScreenViewModel) {
 	// *past colors are currently disabled as an "experiment" to simplify color preferences
 
 	val defaultThemeColor = MaterialTheme.colorScheme.primary
-	val defaultBackgroundRegular = EventStyle.ThemePrimary.color()
+	val defaultBackgroundRegular = DefaultLessonColors.Regular
 	//val defaultBackgroundRegularPast = EventColor.ThemePrimary.pastColor()
-	val defaultBackgroundExam = EventStyle.ThemeError.color()
+	val defaultBackgroundExam = DefaultLessonColors.Exam
 	//val defaultBackgroundExamPast = EventColor.ThemeError.pastColor()
-	val defaultBackgroundIrregular = EventStyle.ThemeTertiary.color()
+	val defaultBackgroundIrregular = DefaultLessonColors.Irregular
 	//val defaultBackgroundIrregularPast = EventColor.ThemeTertiary.pastColor()
-	val defaultBackgroundCancelled = EventStyle.ThemeSecondary.color()
+	val defaultBackgroundCancelled = DefaultLessonColors.Cancelled
 	//val defaultBackgroundCancelledPast = EventColor.ThemeSecondary.pastColor()
 
 	PreferenceGroup(stringResource(id = R.string.preference_category_styling_colors)) {

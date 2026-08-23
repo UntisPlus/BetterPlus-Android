@@ -15,6 +15,7 @@ import com.deelabs.untisplus.data.repository.withDefault
 import com.deelabs.untisplus.data.settings.model.UserSettings
 import com.deelabs.untisplus.helpers.BuildConfigFieldsProvider
 import com.deelabs.untisplus.models.PeriodItem
+import com.deelabs.untisplus.ui.weekview.DefaultLessonColors
 import com.deelabs.untisplus.ui.weekview.Event
 import com.deelabs.untisplus.ui.weekview.EventStyle
 import kotlinx.coroutines.flow.filterNotNull
@@ -120,10 +121,10 @@ class TimetableMapper @Inject constructor(
 			textStyle = TextStyle(color = Color((subjectEntity?.foreColor ?: periodItem.originalPeriod.foreColor).toColorInt()))
 		)
 
-		val regularColor = EventStyle.Custom(Color(backgroundRegular)).withDefault(hasBackgroundRegular(), EventStyle.ThemePrimary)
-		val examColor = EventStyle.Custom(Color(backgroundExam)).withDefault(hasBackgroundExam(), EventStyle.ThemeError)
-		val cancelledColor = EventStyle.Custom(Color(backgroundCancelled)).withDefault(hasBackgroundCancelled(), EventStyle.ThemeTertiary)
-		val irregularColor = EventStyle.Custom(Color(backgroundIrregular)).withDefault(hasBackgroundIrregular(), EventStyle.ThemeSecondary)
+		val regularColor = EventStyle.Custom(Color(backgroundRegular)).withDefault(hasBackgroundRegular(), EventStyle.Custom(DefaultLessonColors.Regular))
+		val examColor = EventStyle.Custom(Color(backgroundExam)).withDefault(hasBackgroundExam(), EventStyle.Custom(DefaultLessonColors.Exam))
+		val cancelledColor = EventStyle.Custom(Color(backgroundCancelled)).withDefault(hasBackgroundCancelled(), EventStyle.Custom(DefaultLessonColors.Cancelled))
+		val irregularColor = EventStyle.Custom(Color(backgroundIrregular)).withDefault(hasBackgroundIrregular(), EventStyle.Custom(DefaultLessonColors.Irregular))
 
 		return when {
 			periodItem.isExam() -> if (schoolBackgroundList.contains("exam")) defaultColor else examColor
