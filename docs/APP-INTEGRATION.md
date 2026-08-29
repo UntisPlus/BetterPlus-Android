@@ -136,6 +136,29 @@ No app change needed here.
 
 ---
 
+## 8. God-Api permission tiers (new)
+
+The backend now has a tiered permission model. The app should be aware of these
+for future feature flags / UI gates:
+
+| Level | User has | What they see |
+|---|---|---|
+| 1 (default) | no perms | Class pool + own stock timetable + info-center |
+| 2/3 | `ROOM`/`TEACHER`/`SUBJECT` | + **reconstructed** room/teacher/subject timetables (per type granted) |
+| 4 | non-student, no perms | **Stock WebUntis passthrough only** (logged, saved, no pool) |
+| 5 | `god-api` | **Full raw superuser**: all teacher/room/class/student timetables + masterData served **raw from pooled teacher accounts** (no reconstruction). Cannot hold recon perms. Non-student donates to pool. |
+| 6 | `god-api-editor` | + **absence-checking + lesson/subject writes** (blocked for all other tiers). |
+
+**Absence/write methods** (blocked unless `god-api-editor`):
+- JSON-RPC: `getStudentAbsences2017`, `getPersonAbsence`, `getOwnAbsence`, `getTimetableWithAbsences`, plus any method prefixed `set*`, `add*`, `update*`, `delete*`, `change*`.
+- REST: `POST/PUT/DELETE` to `/absences/...` or timetable mutation endpoints.
+
+The app's existing `displayAllowed` handling (section 6) works unchanged for
+levels 2/3. Levels 5/6 are new server-side paths — the app doesn't need changes
+unless you want to expose god features in the UI.
+
+---
+
 ## Suggested build order
 
 1. Reconcile hostname → `api-untis.deelabs.tech` (app).
