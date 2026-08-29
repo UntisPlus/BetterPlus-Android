@@ -1,4 +1,0 @@
-- Fehler behoben: Hintergrunddienste stoppen nicht korrekt
-- Fehler behoben: Versehentliches Öffnen des Drawers
-
-Diese Version wird die erste F-Droid kompatible 4.x Version von BetterUntis.

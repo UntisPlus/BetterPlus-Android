@@ -1,2 +1,0 @@
-- Improved lesson info dialog
-- Fixed some crashes and other bugs

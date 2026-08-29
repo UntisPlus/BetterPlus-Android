@@ -1,3 +1,0 @@
-- Improve holiday design
-- Fix needlessly extending time range for very long events
-- Fix potential crash when using sentry
