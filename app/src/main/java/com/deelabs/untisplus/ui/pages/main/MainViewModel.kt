@@ -21,9 +21,6 @@ class MainViewModel @Inject constructor(
 	// Expose the userState directly
 	val userState: StateFlow<UserRepository.UserState> = userRepository.userState
 
-	fun consumeApiProviderSelectionStart(): Boolean =
-		userRepository.consumePendingApiProviderSelection()
-
 	// Expose the Flow<UserSettings> from the repository so Compose can collect it
 	val userSettingsFlow: Flow<UserSettings> = userSettingsRepository.getSettings()
 

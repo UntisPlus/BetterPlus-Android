@@ -17,10 +17,25 @@ plugins {
 	alias(libs.plugins.protobuf)
 }
 
+// Version override for the release workflow.
+val versionNameValue = "v1.1.0"
+
+// SSO identity providers proven to render correctly inside the app's own WebView and
+// complete auto-login on this project's target devices. A school's SSO button is only
+// shown when its detected provider is in this list; any other provider falls back to
+// the regular username/password login. The value lives in gradle.properties
+// (ssoProviders=) so CI picks it up automatically; override for a trial build with e.g.:
+//   ./gradlew assembleDebug -PssoProviders=OFFICE_365,GOOGLE
+val ssoProviders = providers.gradleProperty("ssoProviders").orNull
+	?.split(",")
+	?.map { it.trim() }
+	?.filter { it.isNotEmpty() }
+	?.ifEmpty { listOf("OFFICE_365") }
+	?: listOf("OFFICE_365")
+
 // Derives a monotonic versionCode from versionName so bumping the name
 // (e.g. v1.0.1 or v1.1.0) automatically raises the code for app stores.
 // Stable releases end in 99; -betaN ends in N (1-98), keeping betas below final.
-val versionNameValue = "v1.0.0"
 
 fun deriveVersionCode(name: String): Int {
 	val match = Regex("v?(\\d+)\\.(\\d+)\\.(\\d+)(?:[-.]beta\\.?(\\d+))?").find(name)
@@ -48,6 +63,12 @@ android {
 		versionName = versionNameValue
 		vectorDrawables.useSupportLibrary = true
 		testInstrumentationRunner = "com.deelabs.untisplus.HiltTestRunner"
+
+		buildConfigField(
+			"String[]",
+			"SSO_ENABLED_PROVIDERS",
+			"{\"${ssoProviders.joinToString("\", \"")}\"}"
+		)
 
 		ksp {
 			arg("room.schemaLocation", "$projectDir/schemas")

@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   pull_request:
 
+# The enabled SSO providers are a build-time flag: ssoProviders= in gradle.properties
+# (read into BuildConfig.SSO_ENABLED_PROVIDERS in app/build.gradle.kts). This matrix
+# builds both variants with whatever value that property has — keep it as the baseline
+# of providers proven to work in the in-app WebView (currently Office 365 only).
+
 jobs:
   build:
     name: Build ${{ matrix.variant }} APK

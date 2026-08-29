@@ -13,6 +13,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.journeyapps.barcodescanner.ScanIntentResult
 import com.journeyapps.barcodescanner.ScanOptions
+import com.deelabs.untisplus.BuildConfig
 import com.deelabs.untisplus.R
 import com.deelabs.untisplus.api.client.SchoolSearchApi
 import com.deelabs.untisplus.api.client.UserDataApi
@@ -23,6 +24,7 @@ import com.deelabs.untisplus.api.model.untis.MasterData
 import com.deelabs.untisplus.api.model.untis.SchoolInfo
 import com.deelabs.untisplus.api.model.untis.enumeration.ElementType
 import com.deelabs.untisplus.api.model.untis.masterdata.TimeGrid
+import com.deelabs.untisplus.data.cache.ApiCacheCleaner
 import com.deelabs.untisplus.data.database.entities.User
 import com.deelabs.untisplus.data.database.entities.User.Companion.buildApiUrl
 import com.deelabs.untisplus.data.database.entities.UserDao
@@ -35,15 +37,27 @@ import com.deelabs.untisplus.services.CodeScanService
 import com.deelabs.untisplus.ui.navigation.AppNavigator
 import com.deelabs.untisplus.ui.navigation.AppRoutes
 import com.deelabs.untisplus.ui.pages.ActivityViewModel
+import com.deelabs.untisplus.ui.pages.login.sso.SsoLoginResultBus
+import com.deelabs.untisplus.ui.pages.login.sso.SsoProvider
 import crocodile8.universal_cache.FromCache
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 import javax.inject.Inject
+import javax.inject.Named
 
 const val DEMO_API_URL = "https://api.sapuseven.com/untis/testing"
+
+enum class ApiProvider {
+	OFFICIAL,
+	UNTISPLUS,
+	CUSTOM
+}
 
 @HiltViewModel
 class LoginDataInputViewModel @Inject constructor(
@@ -55,11 +69,14 @@ class LoginDataInputViewModel @Inject constructor(
 	private val navigator: AppNavigator,
 	private val userRepository: UserRepository,
 	private val codeScanService: CodeScanService,
-	savedStateHandle: SavedStateHandle
+	@Named("cacheDir") private val cacheDir: File,
+	private val savedStateHandle: SavedStateHandle
 ) : ActivityViewModel() {
 	private val args = savedStateHandle.toRoute<AppRoutes.LoginDataInput>()
 
 	private val existingUserId = if (args.userId == -1L) null else args.userId
+
+	private var existingUser: User? = null
 
 	val isExistingUser = existingUserId != null
 
@@ -67,6 +84,8 @@ class LoginDataInputViewModel @Inject constructor(
 		get() = isExistingUser && loginData.password.value.isNullOrEmpty() && loginData.storedPassword != null
 
 	val loginData = LoginData()
+
+	var apiProvider by mutableStateOf(ApiProvider.UNTISPLUS)
 
 	var advanced by mutableStateOf(false)
 
@@ -113,8 +132,31 @@ class LoginDataInputViewModel @Inject constructor(
 		} ?: true
 	}
 
+	val customEndpointValid: Boolean
+		get() = apiProvider != ApiProvider.CUSTOM ||
+			User.normalizeApiEndpoint(loginData.apiUrl.value.orEmpty()) != null
+
+	val isHttpCustomEndpoint: Boolean
+		get() = apiProvider == ApiProvider.CUSTOM &&
+			User.normalizeApiEndpoint(loginData.apiUrl.value.orEmpty())?.first == "http"
+
 	private val schoolInfoFromSearch = args.schoolInfoSerialized?.let {
 		getJSON().decodeFromString<SchoolInfo>(it)
+	}
+
+	/** SSO identity provider the school advertises, once detected from its web page. */
+	var ssoProvider by mutableStateOf<SsoProvider?>(null)
+		private set
+
+	/** SSO login requires the resolved school server and a provider enabled at build time. */
+	val ssoAvailable: Boolean
+		get() = schoolInfoFromSearch != null && loginData.anonymous.value != true &&
+			ssoProvider != null && ssoProvider!!.type != SsoProvider.Type.UNKNOWN &&
+			BuildConfig.SSO_ENABLED_PROVIDERS.contains(ssoProvider!!.type.name)
+
+	fun onSsoLoginClick() {
+		val serialized = args.schoolInfoSerialized ?: return
+		navigator.navigate(AppRoutes.LoginSso(schoolInfoSerialized = serialized))
 	}
 
 	val codeScanResultHandler: (String?) -> Unit = {
@@ -128,14 +170,21 @@ class LoginDataInputViewModel @Inject constructor(
 	init {
 		viewModelScope.launch(Dispatchers.IO) {
 			existingUserId?.let { userDao.getById(it) }?.let {
+				existingUser = it
 				loginData.loadFromUser(it)
-				advanced = loginData.apiUrl.value?.isNotEmpty() == true
+				apiProvider = when {
+					it.customApiHost?.isNotBlank() == true -> ApiProvider.CUSTOM
+					it.useUntisPlusApi -> ApiProvider.UNTISPLUS
+					else -> ApiProvider.OFFICIAL
+				}
+				advanced = apiProvider != ApiProvider.UNTISPLUS
 			}
 		}
 
 		if (args.demoLogin) {
 			loginData.anonymous.value = true
 			loginData.schoolName.value = "demo"
+			apiProvider = ApiProvider.CUSTOM
 			advanced = true
 			loginData.apiUrl.value = DEMO_API_URL
 
@@ -146,6 +195,7 @@ class LoginDataInputViewModel @Inject constructor(
 			loginData.schoolName.value = schoolInfoFromSearch.loginName
 			schoolIdLocked = true
 			checkAnonymousSupport(it)
+			checkSsoProvider(it)
 		}
 
 		if (showProfileUpdate) {
@@ -153,6 +203,24 @@ class LoginDataInputViewModel @Inject constructor(
 		}
 
 		codeScanResultHandler(args.autoLoginData)
+
+		// A completed SSO login hands over username + app shared secret; log in with them directly.
+		viewModelScope.launch {
+			SsoLoginResultBus.result.collect { result ->
+				result ?: return@collect
+				SsoLoginResultBus.consume()
+
+				loginData.username.value = result.username
+				loginData.password.value = result.key
+				loginData.skipAppSecret.value = true
+
+				if (schoolNameValid.value && usernameValid.value) {
+					errorText = null
+					errorTextRaw = null
+					loadData()
+				}
+			}
+		}
 	}
 
 	fun setCodeScanLauncher(launcher: ManagedActivityResultLauncher<ScanOptions, ScanIntentResult>) {
@@ -161,7 +229,7 @@ class LoginDataInputViewModel @Inject constructor(
 
 	fun onLoginClick() {
 		validate = true
-		if (schoolNameValid.value && usernameValid.value && apiUrlValid.value) {
+		if (schoolNameValid.value && usernameValid.value && apiUrlValid.value && customEndpointValid) {
 			errorText = null
 			errorTextRaw = null
 			loadData()
@@ -180,10 +248,13 @@ class LoginDataInputViewModel @Inject constructor(
 
 			// Custom values
 			loginData.anonymous.value = appLinkData.getBooleanQueryParameter("anonymous", false)
-			loginData.apiUrl.value = appLinkData.getQueryParameter("apiUrl")
+			loginData.apiUrl.value = appLinkData.getQueryParameter("apiUrl")?.takeIf { it.isNotEmpty() }
 			loginData.skipAppSecret.value = appLinkData.getBooleanQueryParameter("skipAppSecret", false)
 
-			advanced = loginData.apiUrl.value?.isNotEmpty() == true
+			if (loginData.apiUrl.value?.isNotEmpty() == true) {
+				apiProvider = ApiProvider.CUSTOM
+				advanced = true
+			}
 
 			loadData()
 		} else {
@@ -200,11 +271,13 @@ class LoginDataInputViewModel @Inject constructor(
 				return@launch
 			}
 
-			val apiHost = if (advanced) loginData.apiUrl.value.orEmpty() else ""
+			val apiHost = resolveEndpointOrigin().orEmpty()
 			val untisApiUrl = User.buildJsonRpcApiUrl(
 				buildApiUrl(apiHost, schoolInfo),
 				schoolInfo.loginName
 			).toString()
+
+			val endpointChanged = existingUser?.let { it.jsonRpcApiUrl.toString() != untisApiUrl } == true
 
 			val appSharedSecret = loadAppSharedSecret(untisApiUrl)
 
@@ -212,16 +285,12 @@ class LoginDataInputViewModel @Inject constructor(
 			val user = buildUser(apiHost, appSharedSecret, schoolInfo, userData)
 
 			withContext(Dispatchers.IO) {
+				if (endpointChanged) ApiCacheCleaner.clearApiCaches(cacheDir)
 				val userId = saveUser(user, userData.masterData)
 				userRepository.switchUser(userId)
-				if (!isExistingUser && !args.demoLogin) {
-					// The user-state change swaps the NavHost; signal it to start on the provider page.
-					preloadTimetable()
-					userRepository.pendingApiProviderSelection = true
-				} else {
-					navigator.navigate(AppRoutes.Timetable()) {
-						popUpTo(0) // Pop all previous routes
-					}
+				preloadTimetable()
+				navigator.navigate(AppRoutes.Timetable()) {
+					popUpTo(0) // Pop all previous routes
 				}
 			}
 		} catch (e: UntisApiException) {
@@ -245,6 +314,19 @@ class LoginDataInputViewModel @Inject constructor(
 		}
 	}
 
+	/**
+	 * Returns the API origin (scheme + authority) to use for the selected provider,
+	 * or null if the official school server should be used.
+	 */
+	private fun resolveEndpointOrigin(): String? {
+		return when (apiProvider) {
+			ApiProvider.OFFICIAL -> null
+			ApiProvider.UNTISPLUS -> "https://${User.UNTISPLUS_API_HOST}"
+			ApiProvider.CUSTOM -> User.normalizeApiEndpoint(loginData.apiUrl.value.orEmpty())
+				?.let { (scheme, authority) -> "$scheme://$authority" }
+		}
+	}
+
 	private fun buildUser(
 		apiHost: String,
 		appSharedSecret: String,
@@ -260,8 +342,8 @@ class LoginDataInputViewModel @Inject constructor(
 			if (loginData.anonymous.value != true) loginData.username.value else null,
 			if (loginData.anonymous.value != true) appSharedSecret else null,
 			loginData.anonymous.value == true,
-			loginData.useUntisPlusApi.value,
-			loginData.customApiHost.value,
+			apiProvider == ApiProvider.UNTISPLUS,
+			if (apiProvider == ApiProvider.CUSTOM) apiHost.takeIf { it.isNotEmpty() } else null,
 			userData.masterData.timeGrid ?: TimeGrid.generateDefault(),
 			userData.masterData.timeStamp,
 			userData.userData,
@@ -306,7 +388,7 @@ class LoginDataInputViewModel @Inject constructor(
 
 	private suspend fun loadSchoolInfo(): SchoolInfo? {
 		return schoolInfoFromSearch ?: run {
-			if (advanced && !loginData.apiUrl.value.isNullOrBlank()) SchoolInfo(
+			if (apiProvider == ApiProvider.CUSTOM && !loginData.apiUrl.value.isNullOrBlank()) SchoolInfo(
 				server = "",
 				useMobileServiceUrlAndroid = true,
 				useMobileServiceUrlIos = true,
@@ -344,6 +426,9 @@ class LoginDataInputViewModel @Inject constructor(
 	 */
 	private suspend fun loadAppSharedSecret(untisApiUrl: String): String {
 		if (loginData.anonymous.value == true) return ""
+
+		// Credentials already come as username + key (SSO login / QR with skip flag).
+		if (loginData.skipAppSecret.value == true) return loginData.password.value.orEmpty()
 
 		if (useStoredPassword) return loginData.storedPassword!!
 
@@ -391,15 +476,54 @@ class LoginDataInputViewModel @Inject constructor(
 		anonymousSupported = null
 		anonymousSupportJob = viewModelScope.launch(Dispatchers.IO) {
 			anonymousSupported = try {
-				val apiHost = if (advanced) loginData.apiUrl.value.orEmpty() else ""
+				val apiHost = resolveEndpointOrigin().orEmpty()
 				val untisApiUrl = User.buildJsonRpcApiUrl(
 					buildApiUrl(apiHost, schoolInfo),
 					schoolInfo.loginName
 				).toString()
 				userDataApi.getUserData(untisApiUrl, null, "")
 				true
-			} catch (_: Exception) {
+			} catch (_: Throwable) {
 				false
+			}
+		}
+	}
+
+	private fun checkSsoProvider(schoolInfo: SchoolInfo?) {
+		val info = schoolInfo ?: run { ssoProvider = null; return }
+		val advertised = if (info.useMobileServiceUrlAndroid == true && !info.mobileServiceUrl.isNullOrBlank())
+			info.mobileServiceUrl
+		else
+			info.serverUrl
+		if (advertised.isNullOrBlank() || !advertised.contains("://")) return
+
+		viewModelScope.launch(Dispatchers.IO) {
+			val startUrl = if (advertised.toUri().getQueryParameter("school").isNullOrBlank())
+				advertised.toUri().buildUpon()
+					.appendQueryParameter("school", info.loginName.orEmpty())
+					.toString()
+			else advertised
+
+			ssoProvider = try {
+				val connection = URL(startUrl).openConnection() as HttpURLConnection
+				try {
+					connection.connectTimeout = 10_000
+					connection.readTimeout = 10_000
+					connection.instanceFollowRedirects = true
+					connection.setRequestProperty("Accept", "text/html,application/json,*/*")
+					connection.setRequestProperty(
+						"User-Agent",
+						"Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 UntisPlus"
+					)
+					val code = connection.responseCode
+					val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+					val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+					SsoProvider.fromConfig(body)
+				} finally {
+					connection.disconnect()
+				}
+			} catch (_: Throwable) {
+				null
 			}
 		}
 	}
@@ -419,8 +543,6 @@ class LoginDataInputViewModel @Inject constructor(
 		val secondFactor = mutableStateOf<String?>(null)
 		val apiUrl = mutableStateOf(initialApiUrl)
 		val skipAppSecret = mutableStateOf<Boolean?>(null)
-		var useUntisPlusApi = mutableStateOf(false)
-		val customApiHost = mutableStateOf<String?>(null)
 		var storedPassword: String? = null
 
 		fun loadFromUser(user: User) {
@@ -429,8 +551,6 @@ class LoginDataInputViewModel @Inject constructor(
 			anonymous.value = user.anonymous
 			username.value = user.user
 			apiUrl.value = user.apiHost
-			useUntisPlusApi.value = user.useUntisPlusApi
-			customApiHost.value = user.customApiHost
 			storedPassword = user.key
 		}
 	}

@@ -12,6 +12,10 @@ on:
 permissions:
   contents: write
 
+# Released builds use the SSO provider flag from gradle.properties (ssoProviders=
+# -> BuildConfig.SSO_ENABLED_PROVIDERS) so only providers proven to work in the app get
+# published. Trial builds can override it per-run with a workflow variable if desired.
+
 jobs:
   release:
     name: Build and publish release

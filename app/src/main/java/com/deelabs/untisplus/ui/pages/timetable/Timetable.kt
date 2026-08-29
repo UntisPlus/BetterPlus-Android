@@ -8,7 +8,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Menu
@@ -19,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -45,6 +48,7 @@ import com.deelabs.untisplus.ui.animations.fullscreenDialogAnimationExit
 import com.deelabs.untisplus.ui.common.AppScaffold
 import com.deelabs.untisplus.ui.common.DebugDesclaimerAction
 import com.deelabs.untisplus.ui.common.ProfileSelectorAction
+import com.deelabs.untisplus.ui.common.MessageBubble
 import com.deelabs.untisplus.ui.common.disabled
 import com.deelabs.untisplus.ui.dialogs.FeedbackDialog
 import com.deelabs.untisplus.ui.dialogs.ProfileManagementDialog
@@ -155,6 +159,69 @@ fun Timetable(
 						visible = viewModel.feedbackDialog,
 						onDismiss = { viewModel.feedbackDialog = false }
 					)
+
+					Column(
+						modifier = Modifier
+							.align(Alignment.TopCenter)
+							.fillMaxSize()
+					) {
+						AnimatedVisibility(visible = viewModel.sessionError) {
+							MessageBubble(
+								modifier = Modifier
+									.fillMaxWidth()
+									.padding(horizontal = 8.dp, vertical = 4.dp),
+								icon = {
+									Icon(
+										painter = painterResource(id = R.drawable.all_error),
+										contentDescription = stringResource(id = R.string.all_error)
+									)
+								},
+								messageText = R.string.timetable_error_session_expired
+							)
+							Row(
+								modifier = Modifier
+									.fillMaxWidth()
+									.padding(horizontal = 8.dp),
+								horizontalArrangement = Arrangement.End
+							) {
+								TextButton(onClick = { viewModel.dismissSessionError() }) {
+									Text(stringResource(id = R.string.all_cancel))
+								}
+								TextButton(onClick = { viewModel.reloginFromSessionError() }) {
+									Text(stringResource(id = R.string.timetable_error_relogin))
+								}
+							}
+						}
+						AnimatedVisibility(visible = viewModel.loadError && !viewModel.sessionError) {
+							Column {
+								MessageBubble(
+									modifier = Modifier
+										.fillMaxWidth()
+										.padding(horizontal = 8.dp, vertical = 4.dp),
+									icon = {
+										Icon(
+											painter = painterResource(id = R.drawable.all_error),
+											contentDescription = stringResource(id = R.string.all_error)
+										)
+									},
+									messageText = R.string.timetable_error_load_failed
+								)
+								Row(
+									modifier = Modifier
+										.fillMaxWidth()
+										.padding(horizontal = 8.dp),
+									horizontalArrangement = Arrangement.End
+								) {
+									TextButton(onClick = { viewModel.dismissLoadError() }) {
+										Text(stringResource(id = R.string.all_cancel))
+									}
+									TextButton(onClick = { viewModel.retryLoad() }) {
+										Text(stringResource(id = R.string.timetable_error_retry))
+									}
+								}
+							}
+						}
+					}
 
 					var currentTime by remember { mutableStateOf(LocalDateTime.now(viewModel.clock)) }
 

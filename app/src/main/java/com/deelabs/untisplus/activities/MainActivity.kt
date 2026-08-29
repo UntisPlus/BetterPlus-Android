@@ -52,8 +52,7 @@ class MainActivity : ComponentActivity() {
 			MainAppContent(
 				userState = userState,
 				settingsFlow = viewModel.userSettingsFlow,
-				navigator = viewModel.appNavigator,
-				consumeApiProviderSelectionStart = viewModel::consumeApiProviderSelectionStart
+				navigator = viewModel.appNavigator
 			)
 		}
 

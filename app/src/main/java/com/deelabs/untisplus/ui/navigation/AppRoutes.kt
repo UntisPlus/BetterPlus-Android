@@ -28,15 +28,17 @@ object AppRoutes {
 	data object Login
 
 	@Serializable
-	data object ApiProviderSelect
-
-	@Serializable
 	data class LoginDataInput(
 		val demoLogin: Boolean = false,
 		val profileUpdate: Boolean = false,
 		val schoolInfoSerialized: String? = null,
 		val userId: Long = -1,
 		val autoLoginData: String? = null
+	)
+
+	@Serializable
+	data class LoginSso(
+		val schoolInfoSerialized: String
 	)
 
 	@Serializable

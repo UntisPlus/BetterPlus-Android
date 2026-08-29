@@ -16,6 +16,7 @@ import androidx.navigation.toRoute
 import com.sapuseven.compose.protostore.ui.preferences.convertRangeToPair
 import com.deelabs.untisplus.R
 import com.deelabs.untisplus.api.exception.UntisApiException
+import com.deelabs.untisplus.api.model.response.UntisErrorCode
 import com.deelabs.untisplus.api.model.untis.enumeration.ElementType
 import com.deelabs.untisplus.api.model.untis.timetable.Period
 import com.deelabs.untisplus.api.model.untis.timetable.PeriodElement
@@ -84,6 +85,14 @@ class TimetableViewModel @Inject constructor(
 	var feedbackDialog by mutableStateOf(false)
 	var loading by mutableStateOf(true)
 
+	/** True when a load failed due to invalid/expired credentials. */
+	var sessionError by mutableStateOf(false)
+		private set
+
+	/** True when a load failed for non-auth reasons (e.g. network). */
+	var loadError by mutableStateOf(false)
+		private set
+
 	val currentUser: User = userRepository.currentUser!!
 	val allUsersState: StateFlow<List<User>> = userRepository.allUsersState
 
@@ -148,9 +157,28 @@ class TimetableViewModel @Inject constructor(
 
 	private var currentPage = 0
 
+	companion object {
+		// Error codes that indicate the stored credentials/session are no longer valid
+		private val SESSION_ERROR_CODES = setOf(
+			UntisErrorCode.INVALID_PASSWORD,
+			UntisErrorCode.NO_SPECIFIED_USER,
+			UntisErrorCode.REQUIRED_AUTHENTICATION,
+			UntisErrorCode.AUTHENTICATION_ERROR,
+			UntisErrorCode.INVALID_USER_STATUS,
+			UntisErrorCode.INVALID_USER_ROLE,
+			UntisErrorCode.LOCKED_ACCESS,
+			UntisErrorCode.ACCESS_DENIED,
+			UntisErrorCode.ACCESS_DENIED_APP,
+			UntisErrorCode.API_KEY_CHANGED_AND_WORKING_OFFLINE,
+		)
+	}
+
 	private val loadingExceptionHandler: suspend FlowCollector<*>.(Throwable) -> Unit = { throwable ->
-		val message = if (throwable is UntisApiException) "API error" else "other error"
-		Log.e("TimetableViewModel", "Failed to load timetable due to $message", throwable)
+		Log.e("TimetableViewModel", "Failed to load timetable", throwable)
+		if (throwable is UntisApiException && throwable.error?.code in SESSION_ERROR_CODES)
+			sessionError = true
+		else
+			loadError = true
 	}
 
 	init {
@@ -258,6 +286,26 @@ class TimetableViewModel @Inject constructor(
 			.collectEvents(startDate)
 	}
 
+	fun dismissSessionError() {
+		sessionError = false
+	}
+
+	fun reloginFromSessionError() {
+		sessionError = false
+		editUser(currentUser)
+	}
+
+	fun dismissLoadError() {
+		loadError = false
+	}
+
+	fun retryLoad() {
+		loadError = false
+		viewModelScope.launch {
+			onPageReload(currentPage)
+		}
+	}
+
 	fun onItemClick(itemsWithIndex: Pair<List<Event<PeriodItem>>, Int>) {
 		timetableItemDetailsDialog = itemsWithIndex
 	}
@@ -360,7 +408,10 @@ class TimetableViewModel @Inject constructor(
 		val events = timetableMapper.mapTimetablePeriodsToWeekViewEvents(result.value, requestedElement?.type ?: ElementType.STUDENT)
 		val refreshTimestamp = result.originTimeStamp?.let { Instant.ofEpochMilli(it) } ?: Instant.now()
 		emitEvents(mapOf(startDate to events))
-		if (updateLastRefresh)
+		if (updateLastRefresh) {
 			_lastRefresh.emit(refreshTimestamp)
+			sessionError = false
+			loadError = false
+		}
 	}
 }

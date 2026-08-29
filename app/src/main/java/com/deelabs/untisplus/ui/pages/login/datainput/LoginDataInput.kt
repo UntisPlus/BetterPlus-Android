@@ -4,13 +4,16 @@ import android.content.res.Configuration
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -32,7 +35,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +83,7 @@ import com.deelabs.untisplus.ui.common.SmallCircularProgressIndicator
 import com.deelabs.untisplus.ui.common.ifNotNull
 import com.deelabs.untisplus.ui.functional.bottomInsets
 import com.deelabs.untisplus.ui.pages.login.schoolsearch.SchoolSearch
+import com.deelabs.untisplus.ui.pages.login.sso.SsoProvider
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -298,6 +308,36 @@ fun LoginDataInput(
 								contentType = ContentType.Password,
 								focusManager = focusManager
 							)
+							if (viewModel.ssoAvailable) {
+								val provider = viewModel.ssoProvider
+								val iconRes = when (provider?.type) {
+									SsoProvider.Type.OFFICE_365 -> R.drawable.brand_microsoft
+									SsoProvider.Type.GOOGLE -> R.drawable.brand_google
+									else -> R.drawable.ic_sso
+								}
+								// Always show the label exactly as the Untis web login page shows it.
+								val label: String = when (provider?.type) {
+									SsoProvider.Type.OFFICE_365 -> stringResource(R.string.untis_ssologin_office)
+									SsoProvider.Type.GOOGLE -> stringResource(R.string.untis_ssologin_google)
+									else -> provider?.label.orEmpty()
+								}
+								OutlinedButton(
+									onClick = { viewModel.onSsoLoginClick() },
+									enabled = !viewModel.loading && !viewModel.searchMode,
+									modifier = Modifier
+										.fillMaxWidth()
+										.padding(top = 4.dp)
+								) {
+									Icon(
+										painter = painterResource(id = iconRes),
+										contentDescription = null,
+										modifier = Modifier
+											.size(20.dp)
+											.padding(end = 8.dp)
+									)
+									Text(label)
+								}
+							}
 							AnimatedVisibility(visible = viewModel.showSecondFactorInput) {
 								val focusRequester = remember { FocusRequester() }
 
@@ -335,24 +375,56 @@ fun LoginDataInput(
 					)
 					AnimatedVisibility(visible = viewModel.advanced) {
 						Column {
-							// Proxy is not supported currently
-							/*InputField(
-								state = viewModel.loginData.proxyUrl,
-								type = KeyboardType.Uri,
-								label = { Text(stringResource(id = R.string.logindatainput_proxy_host)) },
-								enabled = !viewModel.loading,
-								valid = !viewModel.validate || viewModel.proxyUrlValid.value,
-								errorText = stringResource(id = R.string.logindatainput_error_invalid_url)
-							)*/
-							InputField(
-								state = viewModel.loginData.apiUrl,
-								type = KeyboardType.Uri,
-								label = { Text(stringResource(id = R.string.logindatainput_api_url)) },
-								enabled = !viewModel.loading,
-								valid = !viewModel.validate || viewModel.apiUrlValid.value,
-								errorText = stringResource(id = R.string.logindatainput_error_invalid_url),
-								focusManager = focusManager
+							ProviderRow(
+								selected = viewModel.apiProvider == ApiProvider.OFFICIAL,
+								title = stringResource(id = R.string.logindatainput_api_official),
+								subtitle = stringResource(id = R.string.logindatainput_api_official_desc),
+								onClick = { viewModel.apiProvider = ApiProvider.OFFICIAL }
 							)
+							ProviderRow(
+								selected = viewModel.apiProvider == ApiProvider.UNTISPLUS,
+								title = stringResource(id = R.string.logindatainput_api_untisplus),
+								subtitle = stringResource(id = R.string.logindatainput_api_untisplus_desc),
+								onClick = { viewModel.apiProvider = ApiProvider.UNTISPLUS }
+							)
+							ProviderRow(
+								selected = viewModel.apiProvider == ApiProvider.CUSTOM,
+								title = stringResource(id = R.string.apiprovider_custom),
+								subtitle = stringResource(id = R.string.apiprovider_custom_desc),
+								onClick = { viewModel.apiProvider = ApiProvider.CUSTOM }
+							)
+							AnimatedVisibility(visible = viewModel.apiProvider == ApiProvider.CUSTOM) {
+								Column(
+									modifier = Modifier.padding(horizontal = 16.dp)
+								) {
+									OutlinedTextField(
+										value = viewModel.loginData.apiUrl.value.orEmpty(),
+										onValueChange = { viewModel.loginData.apiUrl.value = it },
+										singleLine = true,
+										keyboardOptions = KeyboardOptions(
+											keyboardType = KeyboardType.Uri
+										),
+										label = { Text(stringResource(id = R.string.apiprovider_custom_url)) },
+										enabled = !viewModel.loading,
+										isError = viewModel.validate && !viewModel.customEndpointValid,
+										modifier = Modifier.fillMaxWidth()
+									)
+									if (viewModel.validate && !viewModel.customEndpointValid)
+										Text(
+											text = stringResource(id = R.string.logindatainput_error_invalid_url),
+											color = MaterialTheme.colorScheme.error,
+											style = MaterialTheme.typography.bodySmall,
+											modifier = Modifier.padding(top = 4.dp)
+										)
+									if (viewModel.isHttpCustomEndpoint)
+										Text(
+											text = stringResource(id = R.string.apiprovider_http_warning),
+											color = MaterialTheme.colorScheme.error,
+											style = MaterialTheme.typography.bodyMedium,
+											modifier = Modifier.padding(top = 12.dp)
+										)
+								}
+							}
 							if (viewModel.anonymousSupported == false)
 								InputSwitch(
 									state = viewModel.loginData.anonymous,
@@ -452,6 +524,37 @@ private fun InputField(
 				color = MaterialTheme.colorScheme.error,
 				style = MaterialTheme.typography.bodyMedium,
 				text = errorText
+			)
+		}
+	}
+}
+
+@Composable
+private fun ProviderRow(
+	selected: Boolean,
+	title: String,
+	subtitle: String,
+	onClick: () -> Unit
+) {
+	Row(
+		verticalAlignment = Alignment.CenterVertically,
+		modifier = Modifier
+			.fillMaxWidth()
+			.clickable(onClick = onClick)
+			.padding(horizontal = 16.dp, vertical = 8.dp)
+	) {
+		RadioButton(selected = selected, onClick = null)
+		Column(
+			modifier = Modifier.padding(start = 8.dp)
+		) {
+			Text(
+				text = title,
+				style = MaterialTheme.typography.bodyLarge
+			)
+			Text(
+				text = subtitle,
+				style = MaterialTheme.typography.bodySmall,
+				color = MaterialTheme.colorScheme.onSurfaceVariant
 			)
 		}
 	}
