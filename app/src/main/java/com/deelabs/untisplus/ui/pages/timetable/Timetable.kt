@@ -50,7 +50,6 @@ import com.deelabs.untisplus.ui.common.DebugDesclaimerAction
 import com.deelabs.untisplus.ui.common.ProfileSelectorAction
 import com.deelabs.untisplus.ui.common.MessageBubble
 import com.deelabs.untisplus.ui.common.disabled
-import com.deelabs.untisplus.ui.dialogs.FeedbackDialog
 import com.deelabs.untisplus.ui.dialogs.ProfileManagementDialog
 import com.deelabs.untisplus.ui.functional.bottomInsets
 import com.deelabs.untisplus.ui.functional.insetsPaddingValues
@@ -154,11 +153,6 @@ fun Timetable(
 				) {
 					val insets = insetsPaddingValues()
 					val navBarHeight = remember { insets.calculateBottomPadding() + 48.dp }
-
-					FeedbackDialog(
-						visible = viewModel.feedbackDialog,
-						onDismiss = { viewModel.feedbackDialog = false }
-					)
 
 					Column(
 						modifier = Modifier
@@ -272,22 +266,6 @@ fun Timetable(
 								.fillMaxSize()
 								.disabled(disabled = needsPersonalTimetable)
 						) { startPadding ->
-							// Feedback button
-							IconButton(
-								modifier = Modifier
-									.align(Alignment.BottomEnd)
-									.padding(end = 8.dp)
-									.bottomInsets(),
-								onClick = {
-									viewModel.showFeedback()
-								}
-							) {
-								Icon(
-									painter = painterResource(R.drawable.all_feedback),
-									contentDescription = "Give feedback"
-								)
-							}
-
 							// Custom personal timetable hint
 							if (needsPersonalTimetable) {
 								Column(

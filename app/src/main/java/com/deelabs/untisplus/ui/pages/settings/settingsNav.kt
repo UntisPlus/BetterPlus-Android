@@ -146,8 +146,8 @@ fun NavGraphBuilder.settingsNav(
 		SettingsScreen(
 			navController = navController,
 			title = stringResource(id = R.string.preferences_info)
-		) {
-			SettingsCategoryAbout(navController)
+		) { viewModel ->
+			SettingsCategoryAbout(navController, viewModel)
 		}
 	}
 

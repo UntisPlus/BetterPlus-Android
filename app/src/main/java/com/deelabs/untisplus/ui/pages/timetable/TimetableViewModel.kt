@@ -82,7 +82,6 @@ class TimetableViewModel @Inject constructor(
 
 	var profileManagementDialog by mutableStateOf(false)
 	var timetableItemDetailsDialog by mutableStateOf<Pair<List<Event<PeriodItem>>, Int>?>(null)
-	var feedbackDialog by mutableStateOf(false)
 	var loading by mutableStateOf(true)
 
 	/** True when a load failed due to invalid/expired credentials. */
@@ -380,10 +379,6 @@ class TimetableViewModel @Inject constructor(
 
 	val onAnonymousSettingsClick = {
 		navigator.navigate(AppRoutes.Settings.Timetable(highlightTitle = R.string.preference_timetable_personal_timetable))
-	}
-
-	fun showFeedback() {
-		feedbackDialog = true
 	}
 
 	fun getTitle(context: Context) = requestedElement?.let {

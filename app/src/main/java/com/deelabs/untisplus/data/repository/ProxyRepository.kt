@@ -128,9 +128,10 @@ class ProxyRepository @Inject constructor(
 
 	// --- §9 calendar ---
 
-	suspend fun calendarToken(classId: Long): ProxyCalendarToken = withSession { base, school ->
-		proxyCalendarApi.token(base, ProxyCalendarTokenRequest(classId = classId), school)
-	}
+	suspend fun calendarToken(request: ProxyCalendarTokenRequest): ProxyCalendarToken =
+		withSession { base, school ->
+			proxyCalendarApi.token(base, request, school)
+		}
 
 	// --- §7 change detection ---
 

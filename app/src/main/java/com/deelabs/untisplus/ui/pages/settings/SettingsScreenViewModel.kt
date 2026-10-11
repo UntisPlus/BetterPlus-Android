@@ -5,7 +5,10 @@ import androidx.compose.material3.ColorScheme
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.deelabs.untisplus.api.model.proxy.ProxyMe
+import com.deelabs.untisplus.api.model.proxy.ProxyStatus
 import com.deelabs.untisplus.data.repository.ProxyRepository
+import com.deelabs.untisplus.api.model.proxy.ProxyCalendarTokenRequest
 import com.deelabs.untisplus.data.model.github.GitHubApi.URL_GITHUB_REPOSITORY_API
 import com.deelabs.untisplus.data.model.github.GitHubUser
 import com.deelabs.untisplus.data.repository.GlobalSettingsRepository
@@ -85,10 +88,28 @@ class SettingsScreenViewModel @AssistedInject constructor(
 
 	/** Fetches (or creates) the account's `.ics` calendar subscription URL. */
 	suspend fun calendarSubscriptionUrl(): Result<String> = runCatching {
-		val classId = userRepository.currentUser?.proxyClassId
-			?: error("This account has no class to subscribe to")
-		proxyRepository.calendarToken(classId).url
+		val user = userRepository.currentUser
+			?: error("No active account")
+
+		// Subscribe to the class timetable when the account is tied to a class;
+		// otherwise (students, teachers) to the account's own personal timetable.
+		// The proxy requires exactly one target.
+		val request = user.proxyClassId
+			?.let { ProxyCalendarTokenRequest(classId = it) }
+			?: ProxyCalendarTokenRequest(personal = true)
+
+		proxyRepository.calendarToken(request).url
 	}
+
+	/** Server health plus the active account's tier, for the proxy diagnostics menu. */
+	suspend fun proxyDiagnostics(): Result<ProxyDiagnostics> = runCatching {
+		ProxyDiagnostics(
+			status = proxyRepository.status(),
+			me = proxyRepository.refreshMe()
+		)
+	}
+
+	data class ProxyDiagnostics(val status: ProxyStatus, val me: ProxyMe)
 
 	suspend fun loadContributors() {
 		_contributorsError.value = null

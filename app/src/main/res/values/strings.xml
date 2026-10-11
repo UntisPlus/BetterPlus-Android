@@ -288,6 +288,10 @@
     <string name="preference_info_contributors">Contributors</string>
     <string name="preference_info_contributors_desc">A list of the contributors</string>
     <string name="preference_info_general">General</string>
+	<string name="preference_proxy_status">UntisPlus proxy</string>
+	<string name="preference_proxy_status_desc">Server health and your account tier</string>
+	<string name="preference_proxy_status_loading">Loading…</string>
+	<string name="preference_proxy_status_error">Could not reach the UntisPlus proxy.</string>
     <string name="preference_info_github">GitHub repository</string>
     <string name="preference_info_libraries">Libraries</string>
     <string name="preference_info_libraries_desc">A list of all used libraries</string>

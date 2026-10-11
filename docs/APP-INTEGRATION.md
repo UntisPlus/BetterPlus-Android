@@ -100,6 +100,12 @@ GET  /me                          current user + {level, permissions}
 - ✅ App: `ProxyCalendarApi` (POST with the persisted cookie); the URL is
   fetched on demand from **Settings → Timetable** (copy / share). Out-of-app
   subscription (Outlook/Google) is recommended instead of in-app ICS rendering.
+- Target selection: the class timetable when the account is tied to a class
+  (`userData.klassenIds`), otherwise the account's **personal** timetable
+  (`{"personal":true}`) — the proxy requires exactly one target, and students'
+  `klassenIds` is usually empty. Verified live: `personal` → `200` with a valid
+  `text/calendar` feed; an unknown `classId` → `403`. Settings → About also
+  exposes a **proxy diagnostics** menu (`/status` + `/me`).
 
 **Accept**: user can grab their `...ics` URL from Settings and
 subscribe from Outlook.
