@@ -148,7 +148,11 @@ android {
 	}
 
 	lint {
+		// Translations are managed via Crowdin (crowdin.yml); default-locale strings can be
+		// removed before the translations catch up, so don't fail the release on either the
+		// missing- or the leftover-translation check.
 		disable += "MissingTranslation"
+		disable += "ExtraTranslation"
 	}
 }
 
