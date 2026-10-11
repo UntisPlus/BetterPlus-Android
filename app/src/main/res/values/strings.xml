@@ -225,6 +225,10 @@
     <string name="notifications_channel_breakinfo_desc">Shows information about the current break and the following lesson</string>
 	<string name="notifications_channel_firstlesson">First lesson</string>
 	<string name="notifications_channel_firstlesson_desc">Shows information about the first lesson and daily messages</string>
+	<string name="notifications_channel_timetablechanges">Timetable changes</string>
+	<string name="notifications_channel_timetablechanges_desc">Shows notifications when substitutions or other timetable changes are published</string>
+	<string name="notifications_timetable_changes_title">Timetable changed</string>
+	<string name="notifications_timetable_changes_text">%1$d change(s) for your class</string>
 	<string name="notifications_text_error_message">You won\'t get any notifications today.</string>
     <string name="notifications_text_error_title">Failed to load timetable</string>
     <string name="notifications_text_first_title">School starts at %1$s</string>
@@ -295,6 +299,8 @@
     <string name="preference_marker">Time indicator</string>
     <string name="preference_notifications_clear">Clear all notifications</string>
     <string name="preference_notifications_enable">Enable break notifications</string>
+    <string name="preference_notifications_timetable_changes">Timetable change notifications</string>
+    <string name="preference_notifications_timetable_changes_desc">Get notified when your school publishes substitution changes</string>
     <string name="preference_notifications_enable_desc">Displays a notification with information about the next lesson during breaks</string>
     <string name="preference_notifications_first_lesson">Notification before first lesson</string>
     <string name="preference_notifications_first_lesson_desc">Show a notification right before school starts</string>
@@ -457,6 +463,7 @@
 	<string name="preference_timetable_calendar_note">Subscribe to this link from Outlook, Google Calendar or any other calendar app. Anyone with the link can read your timetable, so keep it private.</string>
     <string name="preference_info_contributors_error">Error loading contributors from GitHub.</string>
 	<string name="preference_category_notifications_break">Break notifications</string>
+	<string name="preference_category_notifications_timetable_changes">Timetable changes</string>
 	<string name="all_warning">Warning</string>
 	<string name="preference_notifications_exact_alarms_unavailable">Exact notifications are unavailable</string>
 	<string name="preference_notifications_exact_alarms_unavailable_desc">To ensure all notifications are delivered at the correct time, please grant %1$s permission to schedule exact alarms.\nTap to go to settings.</string>

@@ -97,17 +97,16 @@ GET  /me                          current user + {level, permissions}
 ```
 
 - ✅ Backend supports all element types (class/personal/teacher/room/subject).
-- 🔲 App: add a `CalendarTokenApi` (POST with the persisted cookie), store the
-  returned `url` on the `User`, and expose it in **Settings → Timetable**
-  (copy / share / open). Recommend out-of-app subscription (Outlook/Google)
-  instead of in-app ICS rendering.
+- ✅ App: `ProxyCalendarApi` (POST with the persisted cookie); the URL is
+  fetched on demand from **Settings → Timetable** (copy / share). Out-of-app
+  subscription (Outlook/Google) is recommended instead of in-app ICS rendering.
 
 **Accept**: user can grab their `...ics` URL from Settings and
 subscribe from Outlook.
 
 ---
 
-## 5. Timetable change-detection + notifications 🔲
+## 5. Timetable change-detection + notifications ⚠️ (polling done)
 
 Backend contract (`notify.go`, poll `-poll-interval` 60s, window `-1..+4d`):
 
@@ -120,13 +119,15 @@ PeriodRow = {periodId, kind: ADDED|CHANGED|REMOVED, start, end, subject, room, d
 ```
 
 App work:
-- Dependency: `ktor-client-sse` (not currently included).
-- `TimetableChangesApi` poller: call `changes?since=`, keep the current version
-  persisted (DataStore/protostore) so it can resume.
-- SSE client: likely a **foreground service** / long-running worker bound to
-  `UserRepository.currentUser`, so background "timetable updated" notifications
-  work (iOS-style). Wire a refresh callback into `TimetableViewModel`.
-- Map `PeriodRow` to/from the app's existing `api/.../model/untis/Period.kt`.
+- ✅ `ProxyTimetableApi` poller: `changes?since=`, current version persisted per
+  user in `settings.proto` (`timetableChangeSince` / `timetableChangeSinceEvents`)
+  so it resumes across restarts.
+- ✅ `TimetableChangeWorker` (WorkManager, 15 min, network-constrained) posts a
+  notification when changes arrive; toggled in Settings → Notifications.
+- 🔲 SSE client (`ProxyTimetableApi.stream()` implemented) still needs a
+  foreground service and a `TimetableViewModel` refresh callback for ~60 s
+  delivery.
+- 🔲 Map `PeriodRow` to/from the app's existing `api/.../model/untis/Period.kt`.
 - Note the proxy only returns changes for the **requester's own class**
   (403 otherwise) — the app should pass its own `classId`.
 
@@ -184,8 +185,9 @@ Rules:
 Endpoint: `GET {base}/me` (requires `JSESSIONID` cookie from login).
 
 Client done: `ProxyStatusApi.me()` → `ProxyMe` (`:api`), reachable via
-`ProxyRepository.me()`. Still to do: call it after login, cache the tier, and
-gate edit affordances / badges on `permissions`.
+`ProxyRepository.refreshMe()`, which records the tier in
+`ProxyRepository.permissions` (refreshed when Settings opens). Still to do: gate
+edit affordances / badges on `permissions`.
 
 **Response**:
 ```json
@@ -216,10 +218,11 @@ gate edit affordances / badges on `permissions`.
 1. ✅ Reconcile hostname → `api-untis.deelabs.tech` (app).
 2. ✅ Add cookie persistence (`:api` client + DI + `ProxyRepository` silent
    refresh) — unlocks #3/#4/#5.
-3. ⚠️ `/status` probe model done; wire the connectivity pre-flight.
-4. Calendar token API + Settings UI (incl. fixing backend README `classId`).
-5. Change-detection: poller + persisted version, then SSE foreground service
-   + notification + `TimetableViewModel` refresh.
+3. ⚠️ `/status` probe model/client done; connectivity pre-flight not wired (the
+   upstream call already fails fast when the proxy is down — low value).
+4. ✅ Calendar token API + Settings → Timetable link (copy/share).
+5. ⚠️ Change-detection: **polling** done (`TimetableChangeWorker`, persisted
+   version, notification). SSE foreground service + in-app refresh still TODO.
 
 Each step ends with its **Accept** criteria above being greener in the app on a
 real device against `api-untis.deelabs.tech`.

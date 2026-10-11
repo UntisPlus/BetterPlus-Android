@@ -33,6 +33,7 @@ import com.deelabs.untisplus.data.settings.model.NotificationVisibility
 import com.deelabs.untisplus.ui.common.disabled
 import com.deelabs.untisplus.ui.pages.settings.SettingsScreenViewModel
 import com.deelabs.untisplus.workers.NotificationSetupWorker
+import com.deelabs.untisplus.workers.TimetableChangeWorker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -112,6 +113,7 @@ fun SettingsCategoryNotifications(viewModel: SettingsScreenViewModel) {
 					}
 				} else {
 					clearNotifications()
+					TimetableChangeWorker.cancel(context)
 					false
 				}
 			}
@@ -152,6 +154,22 @@ fun SettingsCategoryNotifications(viewModel: SettingsScreenViewModel) {
 				enqueueNotificationSetup()
 			}
 		)
+	}
+
+	if (viewModel.proxyAvailable) {
+		PreferenceGroup(stringResource(R.string.preference_category_notifications_timetable_changes)) {
+			SwitchPreference(
+				title = { Text(stringResource(R.string.preference_notifications_timetable_changes)) },
+				summary = { Text(stringResource(R.string.preference_notifications_timetable_changes_desc)) },
+				enabledCondition = { it.notificationsEnable },
+				settingsRepository = viewModel.userSettingsRepository,
+				value = { it.timetableChangeNotifications },
+				onValueChange = {
+					timetableChangeNotifications = it
+					if (it) TimetableChangeWorker.schedule(context) else TimetableChangeWorker.cancel(context)
+				}
+			)
+		}
 	}
 
 	PreferenceGroup(stringResource(id = R.string.preference_category_notifications_visible_fields)) {

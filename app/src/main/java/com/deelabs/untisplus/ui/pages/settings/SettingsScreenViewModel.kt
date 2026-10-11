@@ -48,6 +48,12 @@ class SettingsScreenViewModel @AssistedInject constructor(
 		if (autoMuteService is AutoMuteServiceZenRuleImpl) {
 			autoMuteService.setUser(userRepository.currentUser!!)
 		}
+		// Refresh the proxy tier/permissions for feature gating; ignore failures.
+		if (proxyRepository.isAvailable) {
+			viewModelScope.launch {
+				runCatching { proxyRepository.refreshMe() }
+			}
+		}
 	}
 
 	val globalRepository = globalSettingsRepository

@@ -78,6 +78,9 @@ message UserSettings {
   bool infocenterAbsencesSortReverse = 51;
   AbsencesTimeRange infocenterAbsencesTimeRange = 52;
   repeated TimetableElement bookmarks = 57;
+  uint64 timetableChangeSince = 58;
+  uint64 timetableChangeSinceEvents = 59;
+  bool timetableChangeNotifications = 60;
 }
 
 message GlobalSettings {
