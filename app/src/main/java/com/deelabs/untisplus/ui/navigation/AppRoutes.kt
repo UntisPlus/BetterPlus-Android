@@ -70,6 +70,7 @@ object AppRoutes {
 
 		@Serializable
 		data object Styling
+		data object Calendar
 
 		@Serializable
 		data class Timetable(@StringRes val highlightTitle: Int = -1)

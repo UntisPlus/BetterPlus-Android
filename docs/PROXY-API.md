@@ -219,9 +219,13 @@ changes. The proxy owns delivery (durable outbox, retries, dead-letter); the app
 only manages the subscription. Brokered out of the change poller, so it works
 with the phone asleep.
 
-Entitlement: the user's **own class** always; any pooled class, or school-wide
-`classId 0`, only with `editor`/`boosted`/admin (`APP-INTEGRATION.md` §8). A
-student app therefore only ever uses its own `classId`.
+Entitlement mirrors the calendar mint: a class (**your own** always; any pooled
+class with `editor`/`boosted`/staff), your personal/student target, a
+teacher/room/subject (recon, `boosted` or staff), or school-wide (privileged
+only) — see `APP-INTEGRATION.md` §8. `GET /api/notifications/options` returns
+exactly what the caller may watch (the `/api/calendar/options` catalog minus the
+Technik aggregate), and both list endpoints return only the caller's **own**
+rows. A student app therefore uses its own `classId` or its `personal` target.
 
 ### 5.1 Webhooks
 
@@ -235,16 +239,18 @@ Cookie: JSESSIONID=… on all
 
 `GET` `200`:
 ```json
-{ "webhooks": [ { "id": 7, "school": "schuldorf", "classId": 5000, "url": "https://example/hook" } ] }
+{ "webhooks": [ { "id": 7, "school": "schuldorf", "elementType": "CLASS", "elementId": 5000,
+                  "name": "10b", "classId": 5000, "url": "https://example/hook", "createdBy": "jdoe" } ] }
 ```
 
-`POST` body:
+`POST` body (one target key; none = school-wide for privileged users):
 ```json
 { "classId": 5000, "url": "https://example/hook", "secret": "optional-hmac-secret" }
 ```
-`200` → `{ "id": 7 }`. `400` if the URL is rejected by the SSRF guard
-(private/loopback host) — the body is `{"error":"<reason>"}`. `403` when the
-`classId` is not the user's and they are not privileged.
+Target keys mirror the calendar mint (`classId`, `personal`/`personId`,
+`teacherId`, `roomId`, `subjectId`). `200` → `{ "id": 7 }`. `400` if the URL is
+rejected by the SSRF guard (private/loopback host) — the body is
+`{"error":"<reason>"}`. `403` when the target is not one the user may watch.
 
 `POST …/{id}/test` `200` → `{ "ok": true, "status": 200 }` (or
 `{ "ok": false, "error": "…" }`).
@@ -277,16 +283,18 @@ Cookie: JSESSIONID=… on all
 ```json
 { "topics": [
   { "id": 3, "school": "schuldorf", "elementType": "CLASS", "elementId": 5000,
-    "classId": 5000, "topic": "my-topic", "baseUrl": "https://ntfy.sh" }
+    "name": "10b", "classId": 5000, "topic": "my-topic", "baseUrl": "https://ntfy.sh",
+    "createdBy": "jdoe" }
 ] }
 ```
 
-`POST` body:
+`POST` body (same target keys as webhooks — at most one; none = school-wide):
 ```json
 { "classId": 5000, "topic": "my-topic", "baseUrl": "https://ntfy.sh" }
 ```
 `200` → `{ "id": 3 }`. `topic` is required (`400` otherwise); `baseUrl` is
-optional and SSRF-checked. `403` as for webhooks.
+optional and SSRF-checked. `403` as for webhooks (target not visible / Technik
+refused).
 
 `POST …/{id}/test` `200` →
 `{ "ok": true, "status": 200, "topic": "my-topic", "server": "https://ntfy.sh" }`.
@@ -497,21 +505,46 @@ Detail lives in `APP-INTEGRATION.md` §4; the contract is repeated here for one
 place of record.
 
 ```
-POST /api/calendar/token      (Cookie, session)
-  {"classId":5000} | {"personal":true} | {"personId":5006}
-  | {"teacherId":123} | {"roomId":456} | {"subjectId":789}
+POST   /api/calendar/token      (Cookie, session)
+  {"classId":5000} | {"classId":2000000000} | {"personal":true}
+  | {"personId":5006} | {"teacherId":123} | {"roomId":456} | {"subjectId":789}
   optional: {"timezone":"Europe/Berlin"} {"days":30}
 → { "type","id","name","token","url","timezone","days",
     "horizon","created","lastUsed","createdBy",
     "classId" (class tokens only), "personId" (personal tokens only) }
 
-GET /api/calendar/{token}.ics    (public — token is the credential)
-GET /week/{token}                (public — JS-free week page)
+GET   /api/calendar/options      (Cookie, session) — subscribable targets
+GET   /api/calendar/tokens       (Cookie, session) — the caller's own tokens
+PATCH /api/calendar/{token}      (Cookie, session, owner) {"days":90}
+DELETE /api/calendar/{token}     (Cookie, session, owner)
+GET   /api/calendar/{token}.ics  (public — token is the credential)
+GET   /week/{token}              (public — JS-free week page)
 ```
 
-Idempotent per target. `url` is always `https`. Store it on the `User` and expose
-it in Settings → Timetable (copy/share/open). The app does **not** need to parse
-the `.ics`.
+Idempotent per target. `url` is always `https`. `classId:2000000000` is the
+synthetic **Technik** aggregate (needs `techniker`). Store the token on the
+`User` and expose it in Settings → Timetable (copy/share/open). The app does
+**not** need to parse the `.ics`.
+
+`GET /api/calendar/options` is the picker source: it returns exactly what the
+user can subscribe to, mirroring the masterData visibility the app already
+honours, so the app can drive the "add calendar" dialog without guessing ids:
+
+```json
+{"school":"myschool",
+ "personal":{"personId":5006,"name":"Jane Doe"},
+ "class":[{"id":5000,"name":"10b"}],
+ "teacher":[],"room":[],"subject":[],
+ "technik":{"id":2000000000,"name":"Technik"}}
+```
+
+`class`/`teacher`/`room`/`subject` are always present (possibly `[]`);
+`personal` is present when the account has a person id; `technik` only for a
+`techniker`. `GET /api/calendar/tokens` returns only the caller's own
+subscriptions (each in the same shape as the mint response), and
+`PATCH`/`DELETE /api/calendar/{token}` re-scope or revoke them; a token that is
+not the caller's 404s, so ownership is enforced server-side and the client need
+only send the session cookie.
 
 ---
 
@@ -524,8 +557,8 @@ them; they need `users.admin` and would 401/403 for a normal student:
   subscriptions, recon, rooms).
 - `/api/admin/events…` — student-event authoring and the event-absence register.
 - `/api/admin/events/import` — bulk import.
-- `/api/webhooks` / `/api/ntfy` **school-wide** (`classId 0`) or other-class
-  targets — privileged only.
+- `/api/webhooks` / `/api/ntfy` **school-wide**, other-class, teacher/room/subject
+  or Technik targets — privileged (or recon/boosted/staff) only.
 
 The one admin-authored thing a student does see is a **student event** on their
 own timetable; it arrives through the normal timetable calls (and via

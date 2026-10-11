@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.deelabs.untisplus.api.model.proxy.ProxyMe
 import com.deelabs.untisplus.api.model.proxy.ProxyStatus
 import com.deelabs.untisplus.data.repository.ProxyRepository
-import com.deelabs.untisplus.api.model.proxy.ProxyCalendarTokenRequest
 import com.deelabs.untisplus.data.model.github.GitHubApi.URL_GITHUB_REPOSITORY_API
 import com.deelabs.untisplus.data.model.github.GitHubUser
 import com.deelabs.untisplus.data.repository.GlobalSettingsRepository
@@ -85,21 +84,6 @@ class SettingsScreenViewModel @AssistedInject constructor(
 	/** Whether the untis-proxy features apply to the active account. */
 	val proxyAvailable: Boolean
 		get() = proxyRepository.isAvailable
-
-	/** Fetches (or creates) the account's `.ics` calendar subscription URL. */
-	suspend fun calendarSubscriptionUrl(): Result<String> = runCatching {
-		val user = userRepository.currentUser
-			?: error("No active account")
-
-		// Subscribe to the class timetable when the account is tied to a class;
-		// otherwise (students, teachers) to the account's own personal timetable.
-		// The proxy requires exactly one target.
-		val request = user.proxyClassId
-			?.let { ProxyCalendarTokenRequest(classId = it) }
-			?: ProxyCalendarTokenRequest(personal = true)
-
-		proxyRepository.calendarToken(request).url
-	}
 
 	/** Server health plus the active account's tier, for the proxy diagnostics menu. */
 	suspend fun proxyDiagnostics(): Result<ProxyDiagnostics> = runCatching {

@@ -8,6 +8,7 @@ import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -84,6 +85,14 @@ open class ApiClient() {
 	/** Plain REST DELETE of an absolute [path]. */
 	protected suspend fun delete(path: String): HttpResponse = withContext(Dispatchers.IO) {
 		return@withContext client.delete(path)
+	}
+
+	/** Plain REST PATCH of [body] as JSON to an absolute [path]. */
+	protected suspend fun patch(path: String, body: Any?): HttpResponse = withContext(Dispatchers.IO) {
+		return@withContext client.patch(path) {
+			contentType(ContentType.Application.Json)
+			setBody(body)
+		}
 	}
 
 	/** Exposes the underlying client for streaming (SSE). */

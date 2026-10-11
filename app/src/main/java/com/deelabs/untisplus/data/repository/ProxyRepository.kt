@@ -8,6 +8,7 @@ import com.deelabs.untisplus.api.client.ProxyStreamEvent
 import com.deelabs.untisplus.api.client.ProxySubscriptionsApi
 import com.deelabs.untisplus.api.client.ProxyTimetableApi
 import com.deelabs.untisplus.api.client.UserDataApi
+import com.deelabs.untisplus.api.model.proxy.ProxyCalendarOptions
 import com.deelabs.untisplus.api.model.proxy.ProxyCalendarToken
 import com.deelabs.untisplus.api.model.proxy.ProxyCalendarTokenRequest
 import com.deelabs.untisplus.api.model.proxy.ProxyCreated
@@ -149,6 +150,27 @@ class ProxyRepository @Inject constructor(
 		withSession { base, school ->
 			proxyCalendarApi.token(base, request, school)
 		}
+
+	/** Lists the calendar targets the active account may subscribe to. */
+	suspend fun calendarOptions(): ProxyCalendarOptions = withSession { base, school ->
+		proxyCalendarApi.options(base, school)
+	}
+
+	/** Lists the active account's own calendar subscriptions. */
+	suspend fun calendarTokens(): List<ProxyCalendarToken> = withSession { base, school ->
+		proxyCalendarApi.tokens(base, school)
+	}
+
+	/** Re-scopes one of the active account's own subscriptions to [days]. */
+	suspend fun calendarUpdateDays(token: String, days: Int): ProxyCalendarToken =
+		withSession { base, school ->
+			proxyCalendarApi.updateDays(base, token, days, school)
+		}
+
+	/** Revokes one of the active account's own calendar subscriptions. */
+	suspend fun calendarRevoke(token: String) = withSession { base, school ->
+		proxyCalendarApi.revoke(base, token, school)
+	}
 
 	// --- §7 change detection ---
 

@@ -90,33 +90,48 @@ diagnostics + background pre-flight.)
 Backend contract (verified in `calendar.go`):
 
 ```
-POST /api/calendar/token
+POST   /api/calendar/token
   body: {"classId": N}           class timetable (pool members)
-        {"personal": true}        personal student timetable (self)
+        {"classId": 2000000000}   synthetic Technik aggregate (techniker only)
+        {"personal": true}        personal timetable (self)
         {"personal": true, "personId": N}  personal timetable for user N
         {"teacherId": N}          teacher timetable (requires recon or boosted)
         {"roomId": N}             room timetable (requires recon or boosted)
         {"subjectId": N}          subject timetable (requires recon or boosted)
         {"timezone": "Europe/Berlin"}  optional (default Europe/Berlin)
-        → {type, id, name, token, url, timezone, created, lastUsed}
+        {"days": 30}              optional lookahead window (clamped 1..365)
+        → {type, id, name, token, url, timezone, days, horizon,
+           created, lastUsed, createdBy, classId?, personId?}
 
-GET  /api/calendar/{token}.ics   public (token is the password)
-GET  /me                          current user + {level, permissions}
+GET    /api/calendar/options      session — subscribable targets
+       → {school, personal?, class[], teacher[], room[], subject[], technik?}
+GET    /api/calendar/tokens       session — the caller's own tokens (list)
+PATCH  /api/calendar/{token}      session, owner — {"days":90}
+DELETE /api/calendar/{token}      session, owner
+GET    /api/calendar/{token}.ics  public (token is the password)
+GET    /week/{token}              public JS-free week page
 ```
 
-- ✅ Backend supports all element types (class/personal/teacher/room/subject).
-- ✅ App: `ProxyCalendarApi` (POST with the persisted cookie); the URL is
-  fetched on demand from **Settings → Timetable** (copy / share). Out-of-app
-  subscription (Outlook/Google) is recommended instead of in-app ICS rendering.
-- Target selection: the class timetable when the account is tied to a class
-  (`userData.klassenIds`), otherwise the account's **personal** timetable
-  (`{"personal":true}`) — the proxy requires exactly one target, and students'
-  `klassenIds` is usually empty. Verified live: `personal` → `200` with a valid
-  `text/calendar` feed; an unknown `classId` → `403`. Settings → About also
-  exposes a **proxy diagnostics** menu (`/status` + `/me`).
+- ✅ Backend supports all element types (class/personal/teacher/room/subject)
+  plus the synthetic Technik class and the lookahead window.
+- ✅ App: `ProxyCalendarApi` (`options`/`tokens`/`updateDays`/`revoke` with the
+  persisted cookie) behind **Settings → Timetable → Calendar subscriptions**.
+  A picker sourced from `GET /api/calendar/options` (personal, classes,
+  teachers, rooms, subjects, Technik) mints a link; the account's own
+  subscriptions are listed with copy / share / open, a lookahead-window editor
+  (PATCH), and revoke (DELETE). Out-of-app subscription (Outlook/Google) is
+  recommended instead of in-app ICS rendering.
+- Tokens are **not** stored locally: the list always comes from
+  `GET /api/calendar/tokens`, so it stays correct across devices. A non-owner
+  token `404`s server-side, so the client only needs the session cookie.
+- Target visibility mirrors the app's master-data visibility: pooled classes,
+  recon elements (teacher/room/subject), everything for `boosted`/staff, and the
+  synthetic Technik class only for a `techniker`. Verified live: `personal` →
+  `200` with a valid `text/calendar` feed; an unknown `classId` → `403`.
+  Settings → About also exposes a **proxy diagnostics** menu (`/status` + `/me`).
 
-**Accept**: user can grab their `...ics` URL from Settings and
-subscribe from Outlook.
+**Accept**: user can pick a timetable they can see, grab its `...ics` URL from
+Settings, subscribe from Outlook, change the window, and revoke it.
 
 ---
 
@@ -251,7 +266,8 @@ is already visible as reconstructed timetables via §6).
    refresh) — unlocks #3/#4/#5.
 3. ✅ `/status` probe wired as a per-user reachability pre-flight in change
    detection (not in `DailyWorker` — its load is direct-to-WebUntis).
-4. ✅ Calendar token API + Settings → Timetable link (copy/share).
+4. ✅ Calendar subscription API + Settings → Timetable management (options
+   picker, own-token list, copy/share/open, lookahead window, revoke).
 5. ✅ Change-detection: polling backstop + SSE `dataSync` foreground service,
    persisted version shared by both, in-app refresh via `TimetableChangeBus`.
 

@@ -228,16 +228,41 @@ data class ProxyCalendarTokenRequest(
 @Serializable
 data class ProxyCalendarToken(
 	val type: String? = null,
-	val id: String? = null,
+	val id: Long? = null,
 	val name: String? = null,
 	val token: String,
 	val url: String,
 	val timezone: String? = null,
 	val days: Int? = null,
-	val horizon: Long? = null,
+	val horizon: String? = null,
 	val created: String? = null,
 	val lastUsed: String? = null,
 	val createdBy: String? = null,
 	val classId: Long? = null,
 	val personId: Long? = null
+)
+
+/** One subscribable calendar target, as listed by `/api/calendar/options`. */
+@Serializable
+data class ProxyCalendarOption(
+	val id: Long,
+	val name: String = ""
+)
+
+/** The signed-in user's own personal timetable target. */
+@Serializable
+data class ProxyCalendarPerson(
+	val personId: Long,
+	val name: String = ""
+)
+
+@Serializable
+data class ProxyCalendarOptions(
+	val school: String? = null,
+	val personal: ProxyCalendarPerson? = null,
+	@SerialName("class") val classes: List<ProxyCalendarOption> = emptyList(),
+	val teacher: List<ProxyCalendarOption> = emptyList(),
+	val room: List<ProxyCalendarOption> = emptyList(),
+	val subject: List<ProxyCalendarOption> = emptyList(),
+	val technik: ProxyCalendarOption? = null
 )
