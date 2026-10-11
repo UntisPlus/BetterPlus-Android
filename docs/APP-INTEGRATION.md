@@ -7,6 +7,12 @@ on a NAS). It is grounded in both codebases — the app at
 
 > Status legend: ✅ done · ⚠️ needs a fix · 🔲 TODO
 
+> **Endpoint contract:** the exact request/response bodies, auth and wire formats
+> for every proxy endpoint (homework flags, absence notes, ntfy/webhook
+> subscriptions, change poll/SSE, `/me`, `/status`, calendar) are in
+> [`PROXY-API.md`](PROXY-API.md). Use it as the source of truth when implementing
+> the `:api` clients; this file tracks the app-side work and status.
+
 ---
 
 ## 1. Critical: hostname reconciliation ⚠️
@@ -62,26 +68,32 @@ than probing a real login.
 
 ---
 
-## 4. Calendar subscription (personal `.ics`) ⚠️ + 🔲
+## 4. Calendar subscription (`.ics`) ✅
 
 Backend contract (verified in `calendar.go`):
 
 ```
-POST /api/calendar/token            body: {"personal":true}  (or {"classId": N})
-        → {school, classId|personId, token, url, created, lastUsed}
-GET  /api/calendar/{token}.ics      public (token is the password)
+POST /api/calendar/token
+  body: {"classId": N}           class timetable (pool members)
+        {"personal": true}        personal student timetable (self)
+        {"personal": true, "personId": N}  personal timetable for user N
+        {"teacherId": N}          teacher timetable (requires recon or boosted)
+        {"roomId": N}             room timetable (requires recon or boosted)
+        {"subjectId": N}          subject timetable (requires recon or boosted)
+        {"timezone": "Europe/Berlin"}  optional (default Europe/Berlin)
+        → {type, id, name, token, url, timezone, created, lastUsed}
+
+GET  /api/calendar/{token}.ics   public (token is the password)
+GET  /me                          current user + {level, permissions}
 ```
 
-- ⚠️ **Backend README is stale** — it shows `{"class": true}`, but the code
-  requires `classId` (or `personal`). Fix `untis-api/README.md`.
+- ✅ Backend supports all element types (class/personal/teacher/room/subject).
 - 🔲 App: add a `CalendarTokenApi` (POST with the persisted cookie), store the
   returned `url` on the `User`, and expose it in **Settings → Timetable**
   (copy / share / open). Recommend out-of-app subscription (Outlook/Google)
   instead of in-app ICS rendering.
-- Note: **personal** tokens are bound to the session user's own student
-  timetable (`STUDENT` endpoint) — that's the per-student feed.
 
-**Accept**: user can grab their personal `...ics` URL from Settings and
+**Accept**: user can grab their `...ics` URL from Settings and
 subscribe from Outlook.
 
 ---
@@ -136,26 +148,51 @@ No app change needed here.
 
 ---
 
-## 8. God-Api permission tiers (new)
+## 8. Permission tiers (backend)
 
-The backend now has a tiered permission model. The app should be aware of these
-for future feature flags / UI gates:
+The backend has a tiered permission model. The app can query the user's effective
+tier via `GET /me` (see section 9). Tiers:
 
-| Level | User has | What they see |
+| Level | Flags | What the user gets |
 |---|---|---|
-| 1 (default) | no perms | Class pool + own stock timetable + info-center |
-| 2/3 | `ROOM`/`TEACHER`/`SUBJECT` | + **reconstructed** room/teacher/subject timetables (per type granted) |
-| 4 | non-student, no perms | **Stock WebUntis passthrough only** (logged, saved, no pool) |
-| 5 | `god-api` | **Full raw superuser**: all teacher/room/class/student timetables + masterData served **raw from pooled teacher accounts** (no reconstruction). Cannot hold recon perms. Non-student donates to pool. |
-| 6 | `god-api-editor` | + **absence-checking + lesson/subject writes** (blocked for all other tiers). |
+| **Basic** (default) | *(none)* | Class pool + own stock student timetable + **own absence reads** |
+| **Reconstruction** | `recon` (global or per-user) | + teacher/room/subject timetables **reconstructed** from pooled class data |
+| **Boosted** | `boosted` (per-user only) | + **raw teacher-account forwarding** for ALL class/teacher/room/subject timetables **and own personal student timetable** (teacher-grade future horizon). **No editing.** Falls back to Basic if no teacher account saved. |
+| **Editor** | `editor` (per-user only) | + **absence + lesson/subject write (editing) methods** (`set*`, `add*`, `update*`, `delete*`, `change*`). Independent — pair with `boosted` for full experience. |
 
-**Absence/write methods** (blocked unless `god-api-editor`):
-- JSON-RPC: `getStudentAbsences2017`, `getPersonAbsence`, `getOwnAbsence`, `getTimetableWithAbsences`, plus any method prefixed `set*`, `add*`, `update*`, `delete*`, `change*`.
-- REST: `POST/PUT/DELETE` to `/absences/...` or timetable mutation endpoints.
+Rules:
+- **Boosted XOR Recon** — mutually exclusive per user (granting one revokes the other).
+- `editor` is independent and never triggers the XOR.
+- Non-student accounts without `boosted` are **stock WebUntis passthrough** for all timetables; their masterData keeps upstream flags untouched.
+- **Absence reads (own data) are always allowed** — no gate.
 
-The app's existing `displayAllowed` handling (section 6) works unchanged for
-levels 2/3. Levels 5/6 are new server-side paths — the app doesn't need changes
-unless you want to expose god features in the UI.
+---
+
+## 9. `GET /me` — current user's tier ✅
+
+Endpoint: `GET {base}/me` (requires `JSESSIONID` cookie from login).
+
+**Response**:
+```json
+{
+  "username": "evadee",
+  "level": "boosted",
+  "permissions": { "recon": false, "boosted": true, "editor": false }
+}
+```
+
+**`level` values**: `basic` | `recon` | `boosted` | `editor` | `boosted+editor`
+
+**Use in app**:
+- Call `/me` once after login (or cache briefly) to know the tier.
+- Hide edit buttons (absence, lesson-topic) when `editor` is `false`.
+- Show "Boosted" badge / feature when `boosted` is `true`.
+- Could gate UI for reconstructed timetables on `recon` / `boosted`.
+
+**Auth**: needs the persisted `JSESSIONID` + `schoolname` cookies (see section 2).  
+**Failure**: 401 `{"error":"not logged in"}` — trigger re-login flow.
+
+**Accept**: app reads tier on login, caches it, and correctly hides/shows edit affordances.
 
 ---
 
