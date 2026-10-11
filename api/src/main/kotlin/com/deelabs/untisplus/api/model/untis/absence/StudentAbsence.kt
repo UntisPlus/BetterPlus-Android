@@ -19,4 +19,18 @@ data class StudentAbsence(
 	val manualNotificationStatus: String? = null, // observed: "NOT_NOTIFIED",
 	val autoNotificationStatus: String? = null, // observed: "NO_AUTO_PARENT_NOTIFICATION_AND_NO_ATTEMPT",
 	val studentOfAge: Boolean? = null, // observed: false
+	// untis-proxy injected (docs/PROXY-API.md §6.7); null/absent upstream.
+	val note: String? = null,
+	val noteUpdatedAt: String? = null,
+	val derived: AbsenceDerived? = null,
+)
+
+@Serializable
+data class AbsenceDerived(
+	val classId: Long? = null,
+	val className: String? = null,
+	val weekday: String? = null,
+	val date: String? = null,
+	val subject: String? = null,
+	val reason: String? = null,
 )

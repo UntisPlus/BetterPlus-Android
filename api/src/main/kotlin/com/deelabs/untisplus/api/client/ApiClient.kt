@@ -6,6 +6,8 @@ import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.delete
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
@@ -59,6 +61,34 @@ open class ApiClient() {
 			setBody(body)
 		}
 	}
+
+	/**
+	 * Plain REST GET with an absolute [path]. Used by the proxy endpoints
+	 * (`/status`, `/healthz`, `/me`, ...), which are not JSON-RPC.
+	 */
+	protected suspend fun get(path: String): HttpResponse = withContext(Dispatchers.IO) {
+		return@withContext client.get(path)
+	}
+
+	/**
+	 * Plain REST POST of [body] as JSON to an absolute [path]. Unlike [request]
+	 * this accepts an arbitrary body type, for the proxy's write endpoints.
+	 */
+	protected suspend fun post(path: String, body: Any?): HttpResponse = withContext(Dispatchers.IO) {
+		return@withContext client.post(path) {
+			contentType(ContentType.Application.Json)
+			setBody(body)
+		}
+	}
+
+	/** Plain REST DELETE of an absolute [path]. */
+	protected suspend fun delete(path: String): HttpResponse = withContext(Dispatchers.IO) {
+		return@withContext client.delete(path)
+	}
+
+	/** Exposes the underlying client for streaming (SSE). */
+	protected val httpClient: HttpClient
+		get() = client
 
 	private val ContentType.Application.JsonRpc: ContentType
 		get() = ContentType("application", "json-rpc")

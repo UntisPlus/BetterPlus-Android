@@ -2,8 +2,11 @@ package com.deelabs.untisplus.ui.pages.infocenter
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.deelabs.untisplus.api.model.untis.classreg.HomeWork
+import com.deelabs.untisplus.api.model.untis.absence.StudentAbsence
 import com.deelabs.untisplus.api.model.untis.enumeration.Right
 import com.deelabs.untisplus.data.repository.MasterDataRepository
+import com.deelabs.untisplus.data.repository.ProxyRepository
 import com.deelabs.untisplus.data.repository.UserRepository
 import com.deelabs.untisplus.data.repository.UserSettingsRepository
 import com.deelabs.untisplus.domain.GetAbsencesUseCase
@@ -27,6 +30,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -42,8 +46,22 @@ class InfoCenterViewModel @Inject constructor(
 	getHomework: GetHomeworkUseCase,
 	getAbsences: GetAbsencesUseCase,
 	getOfficeHours: GetOfficeHoursUseCase,
+	private val proxyRepository: ProxyRepository,
 ) : ViewModel() {
 	private val excuseStatuses = masterDataRepository.userData?.excuseStatuses ?: emptyList()
+
+	/** Whether the untis-proxy features (homework flags, absence notes) apply. */
+	val proxyAvailable: Boolean
+		get() = proxyRepository.isAvailable
+
+	/**
+	 * Optimistic local overlay of homework "done" flags so the checkbox flips
+	 * immediately; the proxy's injected value wins once the list is reloaded.
+	 */
+	private val homeworkDoneOverrides = MutableStateFlow<Map<Long, Boolean>>(emptyMap())
+
+	/** Optimistic local overlay of absence notes, keyed by absence id. */
+	private val absenceNoteOverrides = MutableStateFlow<Map<Long, String?>>(emptyMap())
 
 	val shouldShowAbsences: Boolean
 		get() = Right.R_MY_ABSENCES in userRepository.currentUser!!.userData.rights
@@ -104,21 +122,57 @@ class InfoCenterViewModel @Inject constructor(
 	val eventsState: StateFlow<EventsUiState> = combine(
 		getExams(),
 		getHomework(),
-		EventsUiState::Success
-	).stateIn(
+		homeworkDoneOverrides
+	) { exams, homework, overrides ->
+		EventsUiState.Success(
+			exams,
+			homework.map { list -> list.map { it.copy(done = overrides[it.id] ?: it.done) } }
+		)
+	}.stateIn(
 		scope = viewModelScope,
 		started = SharingStarted.WhileSubscribed(5_000),
 		initialValue = EventsUiState.Loading
 	)
 
-	val absencesState: StateFlow<AbsencesUiState> =
-		(if (!shouldShowAbsences) emptyFlow() else getAbsences())
-			.map { AbsencesUiState.Success(it, excuseStatuses) }
-			.stateIn(
-				scope = viewModelScope,
-				started = SharingStarted.WhileSubscribed(5_000),
-				initialValue = AbsencesUiState.Loading
-			)
+	/** Toggles a homework "done" flag via the proxy, optimistically. */
+	fun setHomeworkDone(item: HomeWork, done: Boolean) {
+		if (!proxyRepository.isAvailable) return
+		homeworkDoneOverrides.update { it + (item.id to done) }
+		viewModelScope.launch {
+			runCatching { proxyRepository.setHomeworkDone(item.id, done) }
+				.onFailure { homeworkDoneOverrides.update { it - item.id } }
+		}
+	}
+
+	val absencesState: StateFlow<AbsencesUiState> = combine(
+		if (!shouldShowAbsences) emptyFlow() else getAbsences(),
+		absenceNoteOverrides
+	) { result, noteOverrides ->
+		AbsencesUiState.Success(
+			result.map { list ->
+				list.map { absence ->
+					if (noteOverrides.containsKey(absence.id)) absence.copy(note = noteOverrides[absence.id])
+					else absence
+				}
+			},
+			excuseStatuses
+		)
+	}.stateIn(
+		scope = viewModelScope,
+		started = SharingStarted.WhileSubscribed(5_000),
+		initialValue = AbsencesUiState.Loading
+	)
+
+	/** Saves (or clears, when blank) an absence note via the proxy, optimistically. */
+	fun setAbsenceNote(item: StudentAbsence, note: String) {
+		if (!proxyRepository.isAvailable) return
+		val trimmed = note.trim()
+		absenceNoteOverrides.update { it + (item.id to trimmed.ifEmpty { null }) }
+		viewModelScope.launch {
+			runCatching { proxyRepository.setAbsenceNote(item.id, trimmed) }
+				.onFailure { absenceNoteOverrides.update { it - item.id } }
+		}
+	}
 
 	val officeHoursState: StateFlow<OfficeHoursUiState> =
 		(if (!shouldShowAbsences) emptyFlow() else getOfficeHours())

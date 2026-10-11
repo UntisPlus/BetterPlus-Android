@@ -1,6 +1,7 @@
 package com.deelabs.untisplus.modules
 
 import com.deelabs.untisplus.api.client.UserDataApi
+import com.deelabs.untisplus.api.client.installCookieStorage
 import com.deelabs.untisplus.api.rest.MessagesApi
 import com.deelabs.untisplus.data.repository.UserRepository
 import com.deelabs.untisplus.exceptions.UntisRestApiException
@@ -15,6 +16,7 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.cookies.CookiesStorage
 import io.ktor.serialization.kotlinx.json.json
 import javax.inject.Inject
 import kotlin.reflect.KProperty
@@ -26,9 +28,10 @@ object RestApiClientModule {
 	fun provideMessagesApiFactory(
 		userRepository: UserRepository,
 		userDataApi: UserDataApi,
-		httpClientEngineFactory: HttpClientEngineFactory<*>
+		httpClientEngineFactory: HttpClientEngineFactory<*>,
+		cookiesStorage: CookiesStorage
 	): MessagesApiFactory =
-		DefaultMessagesApiFactory(userRepository, userDataApi, httpClientEngineFactory)
+		DefaultMessagesApiFactory(userRepository, userDataApi, httpClientEngineFactory, cookiesStorage)
 }
 
 interface MessagesApiFactory {
@@ -38,7 +41,8 @@ interface MessagesApiFactory {
 class DefaultMessagesApiFactory @Inject constructor(
 	private val userRepository: UserRepository,
 	private val userDataApi: UserDataApi,
-	private val httpClientEngineFactory: HttpClientEngineFactory<*>
+	private val httpClientEngineFactory: HttpClientEngineFactory<*>,
+	private val cookiesStorage: CookiesStorage
 ) : MessagesApiFactory {
 	val messagesApi by keyedLazy({ userRepository.currentUser!!.id }) {
 		MessagesApi(
@@ -46,6 +50,7 @@ class DefaultMessagesApiFactory @Inject constructor(
 			httpClientEngine = httpClientEngineFactory.create()
 		) {
 			it.expectSuccess = true
+			it.installCookieStorage(cookiesStorage)
 			it.install(ContentNegotiation) {
 				json()
 			}

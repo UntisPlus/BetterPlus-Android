@@ -535,9 +535,12 @@ own timetable; it arrives through the normal timetable calls (and via
 
 ## 11. Implementation checklist (for the `:api` module)
 
-1. **Cookie persistence** (blocker for all of §3–§9): a cookie-aware
-   `HttpClient` shared by the intern-JSON-RPC and REST clients, so `JSESSIONID`
-   from login rides on every later call. See `APP-INTEGRATION.md` §2.
+1. **Cookie persistence** (unblocked all of §3–§9): ✅ done. A shared
+   `ProxyCookieStorage` is installed on the intern-JSON-RPC and REST clients via
+   `HttpClientConfig.installCookieStorage(...)`, so `JSESSIONID` from login rides
+   on every later call. No new artifact: on Ktor 3.x `HttpCookies` /
+   `AcceptAllCookiesStorage` live in `ktor-client-core` (only Ktor 2.x had a
+   separate `ktor-client-http-cookies`). See `APP-INTEGRATION.md` §2.
 2. **REST base derivation**: origin of `apiUrl` (§1), not `jsonRpcApiUrl`.
 3. New clients + models (suggest `:api` package split):
    - `HomeworkFlagsApi` → `HomeworkFlagsResult`, `HomeworkFlag`

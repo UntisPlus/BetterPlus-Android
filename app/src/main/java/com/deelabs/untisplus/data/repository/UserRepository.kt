@@ -1,6 +1,7 @@
 package com.deelabs.untisplus.data.repository
 
 import androidx.datastore.core.DataStore
+import com.deelabs.untisplus.api.client.ProxyCookieStorage
 import com.deelabs.untisplus.data.database.entities.User
 import com.deelabs.untisplus.data.database.entities.UserDao
 import com.deelabs.untisplus.data.settings.model.Settings
@@ -19,6 +20,7 @@ import javax.inject.Singleton
 class UserRepository @Inject constructor(
 	private val userDao: UserDao,
 	private val settingsDataStore: DataStore<Settings>,
+	private val cookieStorage: ProxyCookieStorage,
 ) {
 	private val _userState = MutableStateFlow<UserState>(UserState.Loading)
 	val userState: StateFlow<UserState> = _userState
@@ -42,7 +44,11 @@ class UserRepository @Inject constructor(
 		}
 	}
 
-	fun switchUser(user: User) {
+	fun switchUser(user: User, clearProxySession: Boolean = true) {
+		val previousUser = (_userState.value as? UserState.User)?.user
+		if (clearProxySession && previousUser != null && previousUser.id != user.id) {
+			CoroutineScope(Dispatchers.IO).launch { cookieStorage.clear() }
+		}
 		_userState.value = UserState.User(user)
 		CoroutineScope(Dispatchers.IO).launch {
 			settingsDataStore.updateData { currentSettings ->
@@ -53,12 +59,12 @@ class UserRepository @Inject constructor(
 		}
 	}
 
-	suspend fun switchUser(userId: Long) {
+	suspend fun switchUser(userId: Long, clearProxySession: Boolean = true) {
 		val user = userDao.getByIdAsync(userId)
 			?: userDao.getAllFlow().first().firstOrNull()
 
 		user?.let {
-			switchUser(it)
+			switchUser(it, clearProxySession)
 		} ?: run {
 			_userState.value = UserState.NoUsers
 		}
@@ -66,6 +72,9 @@ class UserRepository @Inject constructor(
 
 	suspend fun deleteUser(user: User) {
 		userDao.delete(user)
+		// Drop the proxy session so a deleted account can't leave a live
+		// JSESSIONID behind for the next user.
+		cookieStorage.clear()
 
 		val remainingUsers = userDao.getAllAsync()
 		val currentState = _userState.value

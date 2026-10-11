@@ -114,6 +114,9 @@
     <string name="infocenter_absences_filter_newest_first">Newest first</string>
     <string name="infocenter_absences_filter_time_ranges">Time ranges</string>
     <string name="infocenter_absences_filter">Filter absences</string>
+    <string name="infocenter_absence_note">Note</string>
+    <string name="infocenter_absence_note_add">Add note</string>
+    <string name="infocenter_absence_note_hint">Private note (only visible to you)</string>
 	<string name="infocenter_exams">Exams</string>
 	<string name="infocenter_exams_empty">No exams</string>
 	<string name="infocenter_homework">Homework</string>
@@ -446,6 +449,12 @@
 	<string name="preference_timetable_range_index_reset_desc">Ensure hour labels always start at 1</string>
     <string name="preference_timetable_zoom_gesture">Enable zoom gesture</string>
 	<string name="preference_timetable_zoom_level">Timetable zoom level</string>
+	<string name="preference_timetable_calendar_subscription">Calendar subscription</string>
+	<string name="preference_timetable_calendar_subscription_desc">Get an .ics link for your timetable</string>
+	<string name="preference_timetable_calendar_copy">Copy link</string>
+	<string name="preference_timetable_calendar_share">Share</string>
+	<string name="preference_timetable_calendar_error">Could not create the calendar link</string>
+	<string name="preference_timetable_calendar_note">Subscribe to this link from Outlook, Google Calendar or any other calendar app. Anyone with the link can read your timetable, so keep it private.</string>
     <string name="preference_info_contributors_error">Error loading contributors from GitHub.</string>
 	<string name="preference_category_notifications_break">Break notifications</string>
 	<string name="all_warning">Warning</string>

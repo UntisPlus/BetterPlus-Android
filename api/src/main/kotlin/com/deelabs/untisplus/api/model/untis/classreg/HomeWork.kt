@@ -13,5 +13,8 @@ data class HomeWork(
 	val text: String,
 	val remark: String? = null,
 	val completed: Boolean,
-	val attachments: List<Attachment>
+	val attachments: List<Attachment>,
+	// untis-proxy injected (docs/PROXY-API.md §6.1); always present from the proxy.
+	val done: Boolean = false,
+	val doneAt: String? = null
 )

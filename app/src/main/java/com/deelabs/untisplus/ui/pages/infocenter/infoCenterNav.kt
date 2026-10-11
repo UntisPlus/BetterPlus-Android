@@ -45,7 +45,11 @@ fun NavGraphBuilder.infoCenterNav(
         popExitTransition = { slideOutOfContainer(slideDirection()) }
     ) {
 		val eventsState by viewModel.eventsState.collectAsStateWithLifecycle()
-        InfoCenterEvents(eventsState)
+        InfoCenterEvents(
+            uiState = eventsState,
+            proxyAvailable = viewModel.proxyAvailable,
+            onSetHomeworkDone = viewModel::setHomeworkDone
+        )
     }
 
     composable<AppRoutes.InfoCenter.Absences>(
@@ -55,7 +59,11 @@ fun NavGraphBuilder.infoCenterNav(
         popExitTransition = { slideOutOfContainer(slideDirection()) }
     ) {
 		val absencesState by viewModel.absencesState.collectAsStateWithLifecycle()
-        InfoCenterAbsences(absencesState)
+        InfoCenterAbsences(
+            uiState = absencesState,
+            proxyAvailable = viewModel.proxyAvailable,
+            onSetNote = viewModel::setAbsenceNote
+        )
     }
 
     composable<AppRoutes.InfoCenter.OfficeHours>(

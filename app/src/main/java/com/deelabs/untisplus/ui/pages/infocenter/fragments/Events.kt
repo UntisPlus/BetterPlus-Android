@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.deelabs.untisplus.R
 import com.deelabs.untisplus.api.model.untis.classreg.Exam
@@ -26,7 +28,11 @@ import java.time.format.FormatStyle
 
 
 @Composable
-fun InfoCenterEvents(uiState: EventsUiState) {
+fun InfoCenterEvents(
+	uiState: EventsUiState,
+	proxyAvailable: Boolean = false,
+	onSetHomeworkDone: (HomeWork, Boolean) -> Unit = { _, _ -> },
+) {
 	Crossfade(targetState = uiState, label = "InfoCenter Events Content") { state ->
 		LazyColumn(
 			horizontalAlignment = Alignment.CenterHorizontally,
@@ -81,7 +87,13 @@ fun InfoCenterEvents(uiState: EventsUiState) {
 								)
 							}
 							else {
-								items(it) { item -> HomeworkItem(item) }
+								items(it) { item ->
+									HomeworkItem(
+										item = item,
+										toggleable = proxyAvailable,
+										onSetDone = { done -> onSetHomeworkDone(item, done) }
+									)
+								}
 							}
 						},
 						onFailure = { item { InfoCenterError(it) } }
@@ -116,7 +128,11 @@ private fun ExamItem(item: Exam) {
 }
 
 @Composable
-private fun HomeworkItem(item: HomeWork) {
+private fun HomeworkItem(
+	item: HomeWork,
+	toggleable: Boolean,
+	onSetDone: (Boolean) -> Unit
+) {
 	ListItem(
 		overlineContent = {
 			Text(item.endDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
@@ -130,7 +146,24 @@ private fun HomeworkItem(item: HomeWork) {
 			)*/
 		},
 		supportingContent = if (item.text.isNotBlank()) {
-			{ Text(item.text) }
+			{
+				Text(
+					item.text,
+					style = if (item.done)
+						MaterialTheme.typography.bodyMedium.copy(
+							textDecoration = TextDecoration.LineThrough
+						)
+					else MaterialTheme.typography.bodyMedium
+				)
+			}
+		} else null,
+		trailingContent = if (toggleable) {
+			{
+				Checkbox(
+					checked = item.done,
+					onCheckedChange = onSetDone
+				)
+			}
 		} else null
 	)
 }

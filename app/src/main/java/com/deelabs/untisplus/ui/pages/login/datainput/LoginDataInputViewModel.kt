@@ -287,7 +287,8 @@ class LoginDataInputViewModel @Inject constructor(
 			withContext(Dispatchers.IO) {
 				if (endpointChanged) ApiCacheCleaner.clearApiCaches(cacheDir)
 				val userId = saveUser(user, userData.masterData)
-				userRepository.switchUser(userId)
+				// The login call above already minted a fresh proxy session; keep it.
+				userRepository.switchUser(userId, clearProxySession = false)
 				preloadTimetable()
 				navigator.navigate(AppRoutes.Timetable()) {
 					popUpTo(0) // Pop all previous routes

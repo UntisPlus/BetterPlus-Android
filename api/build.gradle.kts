@@ -39,6 +39,7 @@ dependencies {
 	implementation(libs.ktor.serialization)
 
 	testImplementation(libs.junit)
+	testImplementation(libs.ktor.client.mock)
 }
 
 // Build Untis Internal OpenAPI specs

@@ -139,6 +139,38 @@ data class User(
 		resolveApiEndpoint(buildJsonRpcApiUrl(apiUrl, schoolName))
 	}
 
+	/**
+	 * Origin (scheme + authority, no path, no trailing slash) of the resolved API
+	 * host — the base for the proxy's own endpoints (`/status`, `/me`, and the
+	 * `/api/…` REST surface). This is deliberately not [restApiUrl], which is the
+	 * upstream `/WebUntis/api/rest` path. Only meaningful when [usesUntisPlusProxy]
+	 * is true. See `docs/PROXY-API.md` §1.
+	 */
+	val proxyBaseUrl: Uri by lazy {
+		jsonRpcApiUrl.buildUpon()
+			.path(null)
+			.clearQuery()
+			.fragment(null)
+			.build()
+	}
+
+	/** Whether the proxy-only endpoints (`/status`, `/me`, `/api/…`) apply to this user. */
+	val usesUntisPlusProxy: Boolean
+		get() = useUntisPlusApi || !customApiHost.isNullOrBlank()
+
+	/**
+	 * The `?school=` value for the proxy's own endpoints. Mirrors the school name
+	 * used by [jsonRpcApiUrl]. See `docs/PROXY-API.md` §1.
+	 */
+	val proxySchoolName: String?
+		get() = (schoolInfo?.loginName
+			?: apiHost.toUri().getQueryParameter("school"))
+			?.takeIf { it.isNotBlank() }
+
+	/** The session user's class id, as required by the change-detection endpoints. */
+	val proxyClassId: Long?
+		get() = userData.klassenIds.firstOrNull()
+
 	val restApiUrl: Uri by lazy {
 		apiUrl.buildUpon()
 			.appendEncodedPath("api/rest")

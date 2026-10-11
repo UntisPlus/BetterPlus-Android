@@ -5,6 +5,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.deelabs.untisplus.data.repository.ProxyRepository
 import com.deelabs.untisplus.data.model.github.GitHubApi.URL_GITHUB_REPOSITORY_API
 import com.deelabs.untisplus.data.model.github.GitHubUser
 import com.deelabs.untisplus.data.repository.GlobalSettingsRepository
@@ -36,6 +37,7 @@ class SettingsScreenViewModel @AssistedInject constructor(
 	internal val masterDataRepository: MasterDataRepository,
 	@Named("json") private val httpClient: HttpClient,
 	@Assisted val colorScheme: ColorScheme,
+	private val proxyRepository: ProxyRepository,
 ) : ViewModel() {
 	@AssistedFactory
 	interface Factory {
@@ -70,6 +72,17 @@ class SettingsScreenViewModel @AssistedInject constructor(
 	}
 
 	fun currentUserId() = userRepository.currentUser?.id
+
+	/** Whether the untis-proxy features apply to the active account. */
+	val proxyAvailable: Boolean
+		get() = proxyRepository.isAvailable
+
+	/** Fetches (or creates) the account's `.ics` calendar subscription URL. */
+	suspend fun calendarSubscriptionUrl(): Result<String> = runCatching {
+		val classId = userRepository.currentUser?.proxyClassId
+			?: error("This account has no class to subscribe to")
+		proxyRepository.calendarToken(classId).url
+	}
 
 	suspend fun loadContributors() {
 		_contributorsError.value = null

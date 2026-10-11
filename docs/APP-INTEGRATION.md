@@ -3,7 +3,7 @@
 This documents what remains to wire the app **fully** against the Go
 `untis-proxy` backend (the server now deployed at `https://api-untis.deelabs.tech`
 on a NAS). It is grounded in both codebases — the app at
-`~/Projects/BetterPlus-Android` and the backend at `~/Projects/untis-api`.
+`~/Projects/BetterPlus-Android` and the backend at `~/Projects/UntisPlus-Proxy`.
 
 > Status legend: ✅ done · ⚠️ needs a fix · 🔲 TODO
 
@@ -15,54 +15,63 @@ on a NAS). It is grounded in both codebases — the app at
 
 ---
 
-## 1. Critical: hostname reconciliation ⚠️
+## 1. Hostname reconciliation ✅
 
-The **backend** is deployed at `api-untis.deelabs.tech`. The **app** currently
-points at `api-beta.deelabs.tech` (repo `dev` branch history / README). Before
-real devices can talk to the NAS, the app's default server must be
-`api-untis.deelabs.tech`.
+The app already targets `api-untis.deelabs.tech`. The `UntisPlus` provider
+resolves its API host to `User.UNTISPLUS_API_HOST`; the `CUSTOM` provider uses the
+user-entered host.
 
 - App host constant: `app/src/main/java/com/deelabs/untisplus/data/database/entities/User.kt`
-  (`apiHost` / `buildApiUrl`, L83-134).
-- Verify with: app `Settings → Server` and the connectivity flags.
+  (`UNTISPLUS_API_HOST` L67, `resolveApiEndpoint`, `buildApiUrl`).
+- `proxyBaseUrl` (origin, no `/WebUntis`, no trailing slash) and
+  `usesUntisPlusProxy` were added on `User` as the base for the proxy's own
+  endpoints.
 
-**Accept**: logged-in user's timetable renders from the NAS host.
+**Accept**: logged-in user's timetable renders from the NAS host. (Done — no
+`api-beta` reference remains anywhere.)
 
 ---
 
-## 2. Critical: session cookies are not persisted 🔲 (blocks everything new)
+## 2. Session cookies persist ✅
 
 Every new endpoint (`POST /api/calendar/token`, `GET /api/timetable/changes`,
 `GET /api/timetable/stream`) authenticates with the **`JSESSIONID`** cookie the
-proxy sets during `getUserData2017` login.
+proxy sets during `getUserData2017` login. That cookie is now captured and
+replayed.
 
-- `:api` Ktor client is **stateless — no cookie jar**:
-  `api/src/main/kotlin/com/deelabs/untisplus/api/client/ApiClient.kt`.
-- The only cookie code today lives in the login WebView
-  (`app/.../ui/pages/login/sso/SsoLoginViewModel.kt`) and is never reused.
+- `:api` has a shared, clearable in-memory store:
+  `ProxyCookieStorage` (`api/.../api/client/ProxyCookieStorage.kt`) and an
+  `HttpClientConfig.installCookieStorage(storage)` helper.
+- DI wires one store into every proxy-facing Ktor client
+  (`JsonRpcApiClientModule` — including `UserDataApi`, which performs the login —
+  and `RestApiClientModule`), so the login cookie rides on later `/api/…` calls.
+- Both login paths funnel through Ktor `getUserData` (password at
+  `LoginDataInputViewModel.kt:284`; SSO publishes credentials then re-enters the
+  same `loadData`), so the session is captured either way.
+- `GET /status`/`/healthz`/`/me` are reachable via `ProxyStatusApi`;
+  `ProxyRepository` maps a `401` → silent re-login from the stored app secret
+  (retry once), else surfaces the existing stale-session path.
+- The store is cleared on real user switches and on user deletion
+  (`UserRepository`), so a session never leaks across accounts. Proxy session TTL
+  is 24h; the silent re-login covers expiry.
 
-Add `ktor-client-http-cookies` (or an OkHttp cookie jar / a shared cookie store)
-to the DI client modules so `JSESSIONID` + `schoolname` persist after login and
-are sent on the `/api/*` calls.
+> Note: no new dependency is needed — `HttpCookies`/`AcceptAllCookiesStorage` ship
+> in `ktor-client-core` on Ktor 3.x (the separate `ktor-client-http-cookies`
+> artifact is a 2.x thing).
 
-- Wiring: `app/src/main/java/com/deelabs/untisplus/modules/JsonRpcApiClientModule.kt`
-  (`RestApiClientModule.kt` for REST).
-- Note proxy session TTL is 24h; reuse the app's existing stale-session
-  re-login path (`sessionError` / `reloginFromSessionError`) to re-auth.
-
-**Accept**: after a successful login, the same session can hit the `/api/*`
-endpoints (not 401).
+**Accept**: after a successful login, the same session hits the `/api/…`
+endpoints (not 401). (Done — unit-tested in `ProxyCookieStorageTest`.)
 
 ---
 
-## 3. `/status` health probe 🔲
+## 3. `/status` health probe ⚠️
 
 Backend `GET /status` is **public** (no auth) and returns
 `{status, mode, version, uptime_sec}`.
 
-Add a small `:api` model + call and use it as a connectivity pre-flight (e.g. in
-`DailyWorker` / `TimetableDependantWorker`) to decide "server reachable" rather
-than probing a real login.
+Client done: `ProxyStatusApi.status()` / `.health()` (`:api`), callable via
+`ProxyRepository.status()`. Still to do: use it as a connectivity pre-flight in
+`DailyWorker` / `TimetableDependantWorker` instead of probing a real login.
 
 **Accept**: app can show/decide server reachability cheaply.
 
@@ -145,6 +154,8 @@ No app change needed here.
   `v1.2.0`. Align.
 - `untis-api/compose.yaml` still hardcodes `schuldorf`/`schuldorf.webuntis.com`;
   NAS compose drops it (auto-resolve). Fine, just be consistent for the docs.
+  (Backend repo is at `~/Projects/UntisPlus-Proxy`; the older `untis-api` path no
+  longer exists.)
 
 ---
 
@@ -168,9 +179,13 @@ Rules:
 
 ---
 
-## 9. `GET /me` — current user's tier ✅
+## 9. `GET /me` — current user's tier ⚠️
 
 Endpoint: `GET {base}/me` (requires `JSESSIONID` cookie from login).
+
+Client done: `ProxyStatusApi.me()` → `ProxyMe` (`:api`), reachable via
+`ProxyRepository.me()`. Still to do: call it after login, cache the tier, and
+gate edit affordances / badges on `permissions`.
 
 **Response**:
 ```json
@@ -198,9 +213,10 @@ Endpoint: `GET {base}/me` (requires `JSESSIONID` cookie from login).
 
 ## Suggested build order
 
-1. Reconcile hostname → `api-untis.deelabs.tech` (app).
-2. Add cookie persistence (`:api` client + DI) — unlocks #3/#4/#5.
-3. `/status` probe model + connectivity pre-flight.
+1. ✅ Reconcile hostname → `api-untis.deelabs.tech` (app).
+2. ✅ Add cookie persistence (`:api` client + DI + `ProxyRepository` silent
+   refresh) — unlocks #3/#4/#5.
+3. ⚠️ `/status` probe model done; wire the connectivity pre-flight.
 4. Calendar token API + Settings UI (incl. fixing backend README `classId`).
 5. Change-detection: poller + persisted version, then SSE foreground service
    + notification + `TimetableViewModel` refresh.

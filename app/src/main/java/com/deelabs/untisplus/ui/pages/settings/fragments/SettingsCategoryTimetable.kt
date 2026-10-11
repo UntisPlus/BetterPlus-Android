@@ -1,8 +1,24 @@
 package com.deelabs.untisplus.ui.pages.settings.fragments
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.toRoute
@@ -14,11 +30,16 @@ import com.deelabs.untisplus.R
 import com.deelabs.untisplus.ui.navigation.AppRoutes
 import com.deelabs.untisplus.ui.pages.settings.SettingsScreenViewModel
 import com.deelabs.untisplus.ui.preferences.ElementPickerPreference
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
 fun SettingsCategoryTimetable(viewModel: SettingsScreenViewModel) {
 	val args = viewModel.savedStateHandle.toRoute<AppRoutes.Settings.Timetable>()
+
+	if (viewModel.proxyAvailable) {
+		CalendarSubscriptionPreference(viewModel)
+	}
 
 	ElementPickerPreference(
 		title = { Text(stringResource(R.string.preference_timetable_personal_timetable)) },
@@ -229,7 +250,7 @@ fun SettingsCategoryTimetable(viewModel: SettingsScreenViewModel) {
 			title = { Text(stringResource(R.string.preference_timetable_lesson_info_font_size)) },
 			leadingContent = {
 				Icon(
-					painter = painterResource(R.drawable.settings_timetable_font_size),
+					painter = painterResource(id = R.drawable.settings_timetable_font_size),
 					contentDescription = null
 				)
 			},
@@ -240,3 +261,70 @@ fun SettingsCategoryTimetable(viewModel: SettingsScreenViewModel) {
 		)
 	}
 }
+
+@Composable
+private fun CalendarSubscriptionPreference(viewModel: SettingsScreenViewModel) {
+	val context = LocalContext.current
+	val scope = rememberCoroutineScope()
+	var url by remember { mutableStateOf<String?>(null) }
+	var loading by remember { mutableStateOf(false) }
+
+	ListItem(
+		headlineContent = { Text(stringResource(R.string.preference_timetable_calendar_subscription)) },
+		supportingContent = { Text(stringResource(R.string.preference_timetable_calendar_subscription_desc)) },
+		leadingContent = {
+			Icon(
+				painter = painterResource(id = R.drawable.settings_timetable_range),
+				contentDescription = null
+			)
+		},
+		modifier = Modifier.clickable(enabled = !loading) {
+			loading = true
+			scope.launch {
+				viewModel.calendarSubscriptionUrl()
+					.onSuccess { url = it }
+					.onFailure {
+						Toast.makeText(
+							context,
+							context.getString(R.string.preference_timetable_calendar_error),
+							Toast.LENGTH_SHORT
+						).show()
+					}
+				loading = false
+			}
+		}
+	)
+
+	url?.let { link ->
+		AlertDialog(
+			onDismissRequest = { url = null },
+			title = { Text(stringResource(R.string.preference_timetable_calendar_subscription)) },
+			text = {
+				Text(
+					stringResource(R.string.preference_timetable_calendar_note) + "\n\n" + link
+				)
+			},
+			confirmButton = {
+				TextButton(onClick = {
+					val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+					clipboard.setPrimaryClip(ClipData.newPlainText("UntisPlus calendar", link))
+					url = null
+				}) {
+					Text(stringResource(R.string.preference_timetable_calendar_copy))
+				}
+			},
+			dismissButton = {
+				TextButton(onClick = {
+					val intent = Intent(Intent.ACTION_SEND).apply {
+						type = "text/plain"
+						putExtra(Intent.EXTRA_TEXT, link)
+					}
+					context.startActivity(Intent.createChooser(intent, null))
+				}) {
+					Text(stringResource(R.string.preference_timetable_calendar_share))
+				}
+			}
+		)
+	}
+}
+
