@@ -70,6 +70,8 @@ object AppRoutes {
 
 		@Serializable
 		data object Styling
+
+		@Serializable
 		data object Calendar
 
 		@Serializable
