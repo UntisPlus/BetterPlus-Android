@@ -481,6 +481,8 @@
 	<string name="preference_timetable_calendar_subjects">Subjects</string>
 	<string name="preference_timetable_calendar_technik">Technik</string>
 	<string name="preference_timetable_calendar_open">Open</string>
+	<string name="preference_timetable_calendar_search">Search</string>
+	<string name="preference_timetable_calendar_no_results">No matches</string>
 	<string name="preference_timetable_calendar_window">Lookahead window</string>
 	<string name="preference_timetable_calendar_window_days">%1$d days</string>
 	<string name="preference_timetable_calendar_horizon">Through %1$s</string>
