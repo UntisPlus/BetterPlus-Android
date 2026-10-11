@@ -42,5 +42,5 @@ project.
 
 ## Contact
 
-Open an issue at https://github.com/UntisPlus/BetterPlus-Android/issues if
+Open an issue at https://github.com/UntisPlus/UntisPlus-Android/issues if
 you have questions about this policy.

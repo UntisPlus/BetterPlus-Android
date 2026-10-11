@@ -1,9 +1,9 @@
-# APP-INTEGRATION — finishing BetterPlus-Android against the untis-proxy backend
+# APP-INTEGRATION — finishing UntisPlus-Android against the untis-proxy backend
 
 This documents what remains to wire the app **fully** against the Go
 `untis-proxy` backend (the server now deployed at `https://api-untis.deelabs.tech`
 on a NAS). It is grounded in both codebases — the app at
-`~/Projects/BetterPlus-Android` and the backend at `~/Projects/UntisPlus-Proxy`.
+`~/Projects/UntisPlus-Android` and the backend at `~/Projects/UntisPlus-Proxy`.
 
 > Status legend: ✅ done · ⚠️ needs a fix · 🔲 TODO
 

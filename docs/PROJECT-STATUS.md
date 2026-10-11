@@ -1,4 +1,4 @@
-# PROJECT STATUS — UntisPlus (BetterPlus-Android)
+# PROJECT STATUS — UntisPlus (UntisPlus-Android)
 
 _Last updated: 2026-08-23. Written as a compaction-safe handoff; read together with `docs/PLAN-seamless-login.md`._
 
@@ -22,7 +22,7 @@ Kotlin + Jetpack Compose + Hilt + Room. Modules: `:app`, `:api` (pure JVM Ktor c
 ### Versioning / releases
 - `versionNameValue = "v1.0.0"` single source in `app/build.gradle.kts`; `deriveVersionCode(name)`: M*1e6+m*1e4+p*100 (+betaN 1–98, stable ends 99). v1.0.0 = **1000099**
 - deploy.yml greps `versionNameValue = "\K[^"]+` (NOT `versionName =`) — was fixed after breaking CI once; has empty-check guard now
-- Release assets: versioned `UntisPlus-<ver>.apk` + **stable `UntisPlus.apk`** → permanent URL `https://github.com/UntisPlus/BetterPlus-Android/releases/latest/download/UntisPlus.apk`
+- Release assets: versioned `UntisPlus-<ver>.apk` + **stable `UntisPlus.apk`** → permanent URL `https://github.com/UntisPlus/UntisPlus-Android/releases/latest/download/UntisPlus.apk`
 - CI also builds AAB (`bundleRelease`) uploaded as workflow artifact `UntisPlus-<ver>-aab`
 - deploy.yml fingerprint-append step: rewritten file-based (old inline multiline had column-0 `---` which TERMINATES the YAML document — bash got truncated script → EOF error)
 - Old BetterUntis releases + tags deleted; only tag/release `v1.0.0` remains; "Dev Build" workflow deleted earlier (dev snapshots built locally)
@@ -40,7 +40,7 @@ Kotlin + Jetpack Compose + Hilt + Room. Modules: `:app`, `:api` (pure JVM Ktor c
 ## Known quirks / gotchas (beyond AGENTS.md)
 
 - `adb devices` sometimes empty until phone re-plugged/authed; use `/home/evan/Android/Sdk/platform-tools/adb`
-- `gh` CLI prints mise noise line on every call (`mise ~/.config/mise/config.toml tools: gh@...`) — pollutes stdout/command substitution; filter or use `--jq` carefully. Always set `GH_REPO=UntisPlus/BetterPlus-Android` (default repo resolution once hit SapuSeven upstream!)
+- `gh` CLI prints mise noise line on every call (`mise ~/.config/mise/config.toml tools: gh@...`) — pollutes stdout/command substitution; filter or use `--jq` carefully. Always set `GH_REPO=UntisPlus/UntisPlus-Android` (default repo resolution once hit SapuSeven upstream!)
 - Tablet loses connection when unplugged — can't verify installs remotely
 - Room schema change ⇒ fold ALL new columns into same migration bump; folding extra columns into an ALREADY-shipped version number changes identity hash at same version → crash on update; fix = `adb shell pm clear <pkg>` (wipes data)
 - Anonymous-support probe (`LoginDataInputViewModel.checkAnonymousSupport`) fires full getUserData(null,"") per school selection; result only moves the Anonymous switch placement

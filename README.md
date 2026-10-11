@@ -18,13 +18,13 @@ An Android client for the Untis timetable system — a hard fork of [BetterUntis
 **Direct download (always the latest release):**
 
 ```text
-https://github.com/UntisPlus/BetterPlus-Android/releases/latest/download/UntisPlus.apk
+https://github.com/UntisPlus/UntisPlus-Android/releases/latest/download/UntisPlus.apk
 ```
 
-[<img src="https://shields.io/badge/-Get%20it%20on%20Obtainium-blue?style=for-the-badge&logo=github&logoColor=white" alt="Get it on Obtainium" height="50">](obtainium://add?url=https%3A%2F%2Fgithub.com%2FUntisPlus%2FBetterPlus-Android)
+[<img src="https://shields.io/badge/-Get%20it%20on%20Obtainium-blue?style=for-the-badge&logo=github&logoColor=white" alt="Get it on Obtainium" height="50">](obtainium://add?url=https%3A%2F%2Fgithub.com%2FUntisPlus%2FUntisPlus-Android)
 <!-- ^ opens Obtainium directly on Android; on desktop browsers it does nothing. -->
 
-The link above installs the signed release APK. For automatic updates, add the repo to [Obtainium](https://github.com/ImranR98/Obtainium) using the button (on a device with Obtainium installed) or manually via `UntisPlus/BetterPlus-Android`.
+The link above installs the signed release APK. For automatic updates, add the repo to [Obtainium](https://github.com/ImranR98/Obtainium) using the button (on a device with Obtainium installed) or manually via `UntisPlus/UntisPlus-Android`.
 
 ## Building
 
