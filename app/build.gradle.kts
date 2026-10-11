@@ -18,7 +18,7 @@ plugins {
 }
 
 // Version override for the release workflow.
-val versionNameValue = "v1.1.0"
+val versionNameValue = "v1.2.0"
 
 // SSO identity providers proven to render correctly inside the app's own WebView and
 // complete auto-login on this project's target devices. A school's SSO button is only
