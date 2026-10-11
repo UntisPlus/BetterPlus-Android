@@ -521,7 +521,10 @@ GET   /api/calendar/{token}.ics  (public — token is the credential)
 GET   /week/{token}              (public — JS-free week page)
 ```
 
-Idempotent per target. `url` is always `https`. `classId:2000000000` is the
+Idempotent per target **per user**: re-POSTing returns *your* token, never a
+shared one an operator (`untisctl`/`/admin/tokens`) minted for the same element,
+so every token you get back is yours (listed by `GET /api/calendar/tokens`, and
+only you can revoke it). `url` is always `https`. `classId:2000000000` is the
 synthetic **Technik** aggregate (needs `techniker`). Store the token on the
 `User` and expose it in Settings → Timetable (copy/share/open). The app does
 **not** need to parse the `.ics`.
