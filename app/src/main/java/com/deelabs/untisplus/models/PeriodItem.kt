@@ -17,7 +17,7 @@ import kotlinx.serialization.Transient
 class PeriodItem(
 	@Transient private var masterDataRepository: MasterDataRepository? = null,
 	var originalPeriod: Period
-) {
+) : TimetableItem {
 	val classes = HashSet<PeriodElement>()
 	val teachers = HashSet<PeriodElement>()
 	val subjects = HashSet<PeriodElement>()

@@ -16,6 +16,9 @@ import com.deelabs.untisplus.data.database.entities.EventReasonEntity
 import com.deelabs.untisplus.data.database.entities.EventReasonGroupEntity
 import com.deelabs.untisplus.data.database.entities.ExcuseStatusEntity
 import com.deelabs.untisplus.data.database.entities.HolidayEntity
+import com.deelabs.untisplus.data.database.entities.ImportedCalendarDao
+import com.deelabs.untisplus.data.database.entities.ImportedCalendarEntity
+import com.deelabs.untisplus.data.database.entities.ImportedCalendarEventEntity
 import com.deelabs.untisplus.data.database.entities.KlasseEntity
 import com.deelabs.untisplus.data.database.entities.RoomEntity
 import com.deelabs.untisplus.data.database.entities.SchoolYearEntity
@@ -30,7 +33,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 @Database(
-	version = 13,
+	version = 14,
 	entities = [
 		User::class,
 		AbsenceReasonEntity::class,
@@ -40,6 +43,8 @@ import java.time.format.DateTimeFormatter
 		EventReasonGroupEntity::class,
 		ExcuseStatusEntity::class,
 		HolidayEntity::class,
+		ImportedCalendarEntity::class,
+		ImportedCalendarEventEntity::class,
 		KlasseEntity::class,
 		RoomEntity::class,
 		SubjectEntity::class,
@@ -52,12 +57,14 @@ import java.time.format.DateTimeFormatter
 		AutoMigration(from = 9, to = 10),
 		AutoMigration(from = 10, to = 11, spec = MigrationSpec10to11::class),
 		AutoMigration(from = 11, to = 12, spec = MigrationSpec11to12::class),
-		AutoMigration(from = 12, to = 13)
+		AutoMigration(from = 12, to = 13),
+		AutoMigration(from = 13, to = 14)
 	]
 )
 @TypeConverters(UserConverters::class)
 abstract class UserDatabase : RoomDatabase() {
 	abstract fun userDao(): UserDao
+	abstract fun importedCalendarDao(): ImportedCalendarDao
 }
 
 internal class UserConverters {

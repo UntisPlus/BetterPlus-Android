@@ -15,6 +15,7 @@ import com.deelabs.untisplus.data.repository.withDefault
 import com.deelabs.untisplus.data.settings.model.UserSettings
 import com.deelabs.untisplus.helpers.BuildConfigFieldsProvider
 import com.deelabs.untisplus.models.PeriodItem
+import com.deelabs.untisplus.models.TimetableItem
 import com.deelabs.untisplus.ui.weekview.DefaultLessonColors
 import com.deelabs.untisplus.ui.weekview.Event
 import com.deelabs.untisplus.ui.weekview.EventStyle
@@ -49,7 +50,7 @@ class TimetableMapper @Inject constructor(
 	suspend fun mapTimetablePeriodsToWeekViewEvents(
 		items: List<Period>,
 		contextType: ElementType
-	): List<Event<PeriodItem>> {
+	): List<Event<TimetableItem>> {
 		val settings = waitForSettings()
 		return preparePeriods(items, settings.timetableHideCancelled)
 			.mapToPeriodItems()
@@ -84,7 +85,7 @@ class TimetableMapper @Inject constructor(
 		userSettings: UserSettings,
 		contextType: ElementType,
 		includeOrgIds: Boolean = true,
-	): List<Event<PeriodItem>> {
+	): List<Event<TimetableItem>> {
 		return map { periodItem ->
 			Event(
 				title = periodItem.getShort(ElementType.SUBJECT),

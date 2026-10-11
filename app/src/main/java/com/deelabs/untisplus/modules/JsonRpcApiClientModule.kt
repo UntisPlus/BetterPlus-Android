@@ -66,6 +66,24 @@ object JsonRpcApiClientModule {
 			expectSuccess = true
 		}
 
+	/**
+	 * Plain client for fetching external `.ics` files. Responses are read as raw
+	 * text, so no content negotiation is installed, and `expectSuccess` stays off
+	 * so conditional `304 Not Modified` responses can be handled by the caller.
+	 */
+	@Provides
+	@Singleton
+	@Named("ics")
+	fun provideIcsHttpClient(httpClientEngineFactory: HttpClientEngineFactory<*>): HttpClient =
+		HttpClient(httpClientEngineFactory.create()) {
+			install(HttpRequestRetry) {
+				retryOnServerErrors(maxRetries = 2)
+				retryOnException(maxRetries = 2)
+				exponentialDelay()
+			}
+			expectSuccess = false
+		}
+
 	@Provides
 	@Singleton
 	fun provideSchoolSearchApi(

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -20,6 +21,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
@@ -43,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.deelabs.untisplus.R
+import com.deelabs.untisplus.models.PeriodItem
 import com.deelabs.untisplus.ui.animations.fullscreenDialogAnimationEnter
 import com.deelabs.untisplus.ui.animations.fullscreenDialogAnimationExit
 import com.deelabs.untisplus.ui.common.AppScaffold
@@ -88,6 +91,7 @@ fun Timetable(
 	val weekViewZoomEnabled by viewModel.weekViewZoomEnabled.collectAsStateWithLifecycle()
 	val weekViewEventStyle by viewModel.weekViewEventStyle.collectAsStateWithLifecycle()
 	val numDays by viewModel.numDays.collectAsStateWithLifecycle()
+	val showImportedCalendars by viewModel.showImportedCalendars.collectAsStateWithLifecycle()
 
 	DisposableEffect(LocalLifecycleOwner.current) {
 		Log.d("Timetable", "Creating TimetableViewModel")
@@ -126,6 +130,18 @@ fun Timetable(
 					actions = {
 						if (viewModel.isDebug)
 							DebugDesclaimerAction()
+
+						IconButton(onClick = { viewModel.toggleImportedCalendars() }) {
+							Icon(
+								imageVector = Icons.Outlined.DateRange,
+								contentDescription = stringResource(
+									if (showImportedCalendars) R.string.timetable_imported_calendars_hide
+									else R.string.timetable_imported_calendars_show
+								),
+								tint = if (showImportedCalendars) LocalContentColor.current
+								else LocalContentColor.current.copy(alpha = 0.38f)
+							)
+						}
 
 						ProfileSelectorAction(
 							users = users,
@@ -321,7 +337,7 @@ fun Timetable(
 		TimetableItemDetailsDialog(
 			timetableRepository = viewModel.timetableRepository,
 			periodItems = remember {
-				viewModel.timetableItemDetailsDialog?.first?.mapNotNull { it.data } ?: emptyList()
+				viewModel.timetableItemDetailsDialog?.first?.mapNotNull { it.data as? PeriodItem } ?: emptyList()
 			},
 			initialPage = remember {
 				viewModel.timetableItemDetailsDialog?.second ?: 0

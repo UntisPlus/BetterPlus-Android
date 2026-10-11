@@ -25,6 +25,7 @@ import com.deelabs.untisplus.ui.pages.settings.fragments.SettingsCategoryNotific
 import com.deelabs.untisplus.ui.pages.settings.fragments.SettingsCategoryStyling
 import com.deelabs.untisplus.ui.pages.settings.fragments.SettingsCategoryCalendar
 import com.deelabs.untisplus.ui.pages.settings.fragments.SettingsCategoryChangeSubscriptions
+import com.deelabs.untisplus.ui.pages.settings.fragments.SettingsCategoryImportedCalendars
 import com.deelabs.untisplus.ui.pages.settings.fragments.SettingsCategoryTimetable
 import soup.compose.material.motion.animation.materialSharedAxisXIn
 import soup.compose.material.motion.animation.materialSharedAxisXOut
@@ -141,6 +142,14 @@ fun NavGraphBuilder.settingsNav(
 			title = stringResource(id = R.string.preference_timetable_calendar_manage)
 		) {
 			SettingsCategoryCalendar()
+		}
+	}
+	composable<AppRoutes.Settings.ImportedCalendars> {
+		SettingsScreen(
+			navController = navController,
+			title = stringResource(id = R.string.preference_timetable_imported_calendars_manage)
+		) {
+			SettingsCategoryImportedCalendars()
 		}
 	}
 	composable<AppRoutes.Settings.Notifications> {

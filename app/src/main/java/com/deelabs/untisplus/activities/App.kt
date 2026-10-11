@@ -8,6 +8,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.deelabs.untisplus.workers.DailyWorker
 import com.deelabs.untisplus.workers.DailyWorker.Companion.TAG_DAILY_WORK
+import com.deelabs.untisplus.workers.ImportedCalendarSyncWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -28,6 +29,8 @@ class App : Application(), Configuration.Provider {
 				enqueue(OneTimeWorkRequestBuilder<DailyWorker>().build())
 			}
 		}
+
+		ImportedCalendarSyncWorker.schedule(applicationContext)
 	}
 
 	override val workManagerConfiguration: Configuration

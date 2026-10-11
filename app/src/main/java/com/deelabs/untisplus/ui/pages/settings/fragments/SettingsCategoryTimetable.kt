@@ -22,6 +22,32 @@ import kotlin.math.roundToInt
 fun SettingsCategoryTimetable(navController: NavController, viewModel: SettingsScreenViewModel) {
 	val args = viewModel.savedStateHandle.toRoute<AppRoutes.Settings.Timetable>()
 
+	Preference(
+		title = { Text(stringResource(R.string.preference_timetable_imported_calendars_manage)) },
+		summary = { Text(stringResource(R.string.preference_timetable_imported_calendars_manage_desc)) },
+		onClick = { navController.navigate(AppRoutes.Settings.ImportedCalendars) },
+		leadingContent = {
+			Icon(
+				painter = painterResource(id = R.drawable.settings_timetable_range),
+				contentDescription = null
+			)
+		}
+	)
+
+	SwitchPreference(
+		title = { Text(stringResource(R.string.preference_timetable_imported_calendars_show)) },
+		summary = { Text(stringResource(R.string.preference_timetable_imported_calendars_show_desc)) },
+		leadingContent = {
+			Icon(
+				painter = painterResource(id = R.drawable.settings_timetable_range),
+				contentDescription = null
+			)
+		},
+		settingsRepository = viewModel.userSettingsRepository,
+		value = { it.timetableShowImportedCalendars },
+		onValueChange = { timetableShowImportedCalendars = it }
+	)
+
 	if (viewModel.proxyAvailable) {
 		Preference(
 			title = { Text(stringResource(R.string.preference_timetable_calendar_manage)) },

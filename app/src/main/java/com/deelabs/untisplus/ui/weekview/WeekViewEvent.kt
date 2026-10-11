@@ -88,6 +88,7 @@ data class Event<T>(
 	var end: LocalDateTime,
 	val data: T? = null
 ) {
+	var allDay: Boolean = data == null // holidays are passed with a null data object
 	var numSimultaneous: Int = 1 // relative width is determined by 1/x
 	var offsetSteps: Int = 0 // x-offset in multiples of width
 	var simultaneousEvents = mutableSetOf<Event<T>>()
@@ -116,7 +117,7 @@ fun <T> WeekViewEvent(
 	val pastColor = event.eventStyle.pastColor()
 	val textStyle = event.eventStyle.textStyle()
 
-	val isFullDayEvent = event.data == null
+	val isFullDayEvent = event.allDay
 
 	val holidayTextStyle = MaterialTheme.typography.bodyLarge + eventStyle.lessonNameStyle
 

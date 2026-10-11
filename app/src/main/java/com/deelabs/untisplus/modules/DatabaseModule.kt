@@ -6,6 +6,7 @@ import com.deelabs.untisplus.data.database.MIGRATIONS_USER_LEGACY
 import com.deelabs.untisplus.data.database.MIGRATION_USER_7_8
 import com.deelabs.untisplus.data.database.RoomFinderDatabase
 import com.deelabs.untisplus.data.database.UserDatabase
+import com.deelabs.untisplus.data.database.entities.ImportedCalendarDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,6 +34,10 @@ object UserDatabaseModule {
 	@Provides
 	@Singleton
 	fun provideUserDao(db: UserDatabase) = db.userDao()
+
+	@Provides
+	@Singleton
+	fun provideImportedCalendarDao(db: UserDatabase): ImportedCalendarDao = db.importedCalendarDao()
 }
 
 @Module

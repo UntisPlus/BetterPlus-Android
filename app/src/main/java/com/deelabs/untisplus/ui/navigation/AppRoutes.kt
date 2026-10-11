@@ -75,6 +75,9 @@ object AppRoutes {
 		data object Calendar
 
 		@Serializable
+		data object ImportedCalendars
+
+		@Serializable
 		data class Timetable(@StringRes val highlightTitle: Int = -1)
 
 		@Serializable
