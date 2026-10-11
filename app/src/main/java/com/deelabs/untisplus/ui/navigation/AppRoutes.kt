@@ -81,6 +81,9 @@ object AppRoutes {
 		data object Notifications
 
 		@Serializable
+		data object ChangeSubscriptions
+
+		@Serializable
 		data object About {
 
 			@Serializable

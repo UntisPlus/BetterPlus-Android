@@ -17,11 +17,13 @@ import com.deelabs.untisplus.api.model.proxy.ProxyHealth
 import com.deelabs.untisplus.api.model.proxy.ProxyHomeworkFlag
 import com.deelabs.untisplus.api.model.proxy.ProxyHomeworkFlags
 import com.deelabs.untisplus.api.model.proxy.ProxyMe
+import com.deelabs.untisplus.api.model.proxy.ProxyNtfyRequest
 import com.deelabs.untisplus.api.model.proxy.ProxyNtfyTopics
 import com.deelabs.untisplus.api.model.proxy.ProxyPermissions
 import com.deelabs.untisplus.api.model.proxy.ProxyStatus
 import com.deelabs.untisplus.api.model.proxy.ProxySubscriptionTest
 import com.deelabs.untisplus.api.model.proxy.ProxyTimetableChanges
+import com.deelabs.untisplus.api.model.proxy.ProxyWebhookRequest
 import com.deelabs.untisplus.api.model.proxy.ProxyWebhooks
 import com.deelabs.untisplus.data.database.entities.User
 import io.ktor.client.plugins.ClientRequestException
@@ -111,12 +113,17 @@ class ProxyRepository @Inject constructor(
 
 	// --- §5 subscriptions ---
 
+	/** Lists the timetable targets the active account may watch. */
+	suspend fun notificationOptions(): ProxyCalendarOptions = withSession { base, school ->
+		proxySubscriptionsApi.notificationOptions(base, school)
+	}
+
 	suspend fun webhooks(): ProxyWebhooks = withSession { base, school ->
 		proxySubscriptionsApi.webhooks(base, school)
 	}
 
-	suspend fun createWebhook(classId: Long, url: String): ProxyCreated = withSession { base, school ->
-		proxySubscriptionsApi.createWebhook(base, classId, url, school)
+	suspend fun createWebhook(request: ProxyWebhookRequest): ProxyCreated = withSession { base, school ->
+		proxySubscriptionsApi.createWebhook(base, request, school)
 	}
 
 	suspend fun testWebhook(id: Long): ProxySubscriptionTest = withSession { base, school ->
@@ -131,10 +138,9 @@ class ProxyRepository @Inject constructor(
 		proxySubscriptionsApi.ntfyTopics(base, school)
 	}
 
-	suspend fun createNtfy(classId: Long, topic: String, ntfyBaseUrl: String? = null): ProxyCreated =
-		withSession { base, school ->
-			proxySubscriptionsApi.createNtfy(base, classId, topic, ntfyBaseUrl, school)
-		}
+	suspend fun createNtfy(request: ProxyNtfyRequest): ProxyCreated = withSession { base, school ->
+		proxySubscriptionsApi.createNtfy(base, request, school)
+	}
 
 	suspend fun testNtfy(id: Long): ProxySubscriptionTest = withSession { base, school ->
 		proxySubscriptionsApi.testNtfy(base, id, school)

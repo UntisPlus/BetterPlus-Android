@@ -89,12 +89,31 @@ data class ProxyAbsenceNoteRequest(
 
 // --- §5 subscriptions ---
 
+/**
+ * The element a webhook/ntfy subscription points at, using the same keys as the
+ * calendar mint (`classId`, `personal`/`personId`, `teacherId`, `roomId`,
+ * `subjectId`). At most one is set; none means the school-wide target, which is
+ * privileged-only. `docs/PROXY-API.md` §5.
+ */
+data class ProxySubscriptionTarget(
+	val classId: Long? = null,
+	val personId: Long? = null,
+	val personal: Boolean? = null,
+	val teacherId: Long? = null,
+	val roomId: Long? = null,
+	val subjectId: Long? = null
+)
+
 @Serializable
 data class ProxyWebhook(
 	val id: Long,
 	val school: String? = null,
+	@SerialName("elementType") val elementType: String? = null,
+	@SerialName("elementId") val elementId: Long? = null,
+	val name: String? = null,
 	val classId: Long? = null,
-	val url: String
+	val url: String,
+	val createdBy: String? = null
 )
 
 @Serializable
@@ -104,9 +123,20 @@ data class ProxyWebhooks(
 
 @Serializable
 data class ProxyWebhookRequest(
-	val classId: Long,
-	val url: String
-)
+	val classId: Long? = null,
+	val personId: Long? = null,
+	val personal: Boolean? = null,
+	val teacherId: Long? = null,
+	val roomId: Long? = null,
+	val subjectId: Long? = null,
+	val url: String,
+	val secret: String? = null
+) {
+	constructor(target: ProxySubscriptionTarget, url: String, secret: String? = null) : this(
+		target.classId, target.personId, target.personal,
+		target.teacherId, target.roomId, target.subjectId, url, secret
+	)
+}
 
 @Serializable
 data class ProxyNtfyTopic(
@@ -114,9 +144,11 @@ data class ProxyNtfyTopic(
 	val school: String? = null,
 	@SerialName("elementType") val elementType: String? = null,
 	@SerialName("elementId") val elementId: Long? = null,
+	val name: String? = null,
 	val classId: Long? = null,
 	val topic: String,
-	val baseUrl: String? = null
+	val baseUrl: String? = null,
+	val createdBy: String? = null
 )
 
 @Serializable
@@ -126,10 +158,20 @@ data class ProxyNtfyTopics(
 
 @Serializable
 data class ProxyNtfyRequest(
-	val classId: Long,
+	val classId: Long? = null,
+	val personId: Long? = null,
+	val personal: Boolean? = null,
+	val teacherId: Long? = null,
+	val roomId: Long? = null,
+	val subjectId: Long? = null,
 	val topic: String,
 	val baseUrl: String? = null
-)
+) {
+	constructor(target: ProxySubscriptionTarget, topic: String, baseUrl: String? = null) : this(
+		target.classId, target.personId, target.personal,
+		target.teacherId, target.roomId, target.subjectId, topic, baseUrl
+	)
+}
 
 @Serializable
 data class ProxySubscriptionTest(

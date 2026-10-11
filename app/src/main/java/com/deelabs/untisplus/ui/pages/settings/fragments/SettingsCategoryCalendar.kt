@@ -9,13 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -40,7 +34,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sapuseven.compose.protostore.ui.preferences.PreferenceGroup
 import com.deelabs.untisplus.R
-import com.deelabs.untisplus.api.model.proxy.ProxyCalendarOption
 import com.deelabs.untisplus.api.model.proxy.ProxyCalendarOptions
 import com.deelabs.untisplus.api.model.proxy.ProxyCalendarToken
 import com.deelabs.untisplus.api.model.proxy.ProxyCalendarTokenRequest
@@ -59,7 +52,7 @@ fun SettingsCategoryCalendar(viewModel: CalendarSubscriptionsViewModel = hiltVie
 	val failed by viewModel.failed.collectAsStateWithLifecycle()
 
 	var showCategoryPicker by remember { mutableStateOf(false) }
-	var pickerCategory by remember { mutableStateOf<CalendarCategory?>(null) }
+	var pickerCategory by remember { mutableStateOf<SubscriptionCategory<ProxyCalendarTokenRequest>?>(null) }
 	var createdUrl by remember { mutableStateOf<String?>(null) }
 	var activeToken by remember { mutableStateOf<ProxyCalendarToken?>(null) }
 	var revokeToken by remember { mutableStateOf<ProxyCalendarToken?>(null) }
@@ -153,13 +146,14 @@ fun SettingsCategoryCalendar(viewModel: CalendarSubscriptionsViewModel = hiltVie
 	)
 
 	if (showCategoryPicker && options != null) {
-		CalendarCategoryPickerDialog(
-			options = options!!,
+		SubscriptionCategoryPickerDialog(
+			categories = calendarTargets(options!!),
+			titleRes = R.string.preference_timetable_calendar_add,
 			onDismiss = { showCategoryPicker = false },
 			onPick = { category ->
 				showCategoryPicker = false
 				if (category.targets.size == 1) {
-					create(category.targets.first().request)
+					create(category.targets.first().payload)
 				} else {
 					pickerCategory = category
 				}
@@ -168,12 +162,12 @@ fun SettingsCategoryCalendar(viewModel: CalendarSubscriptionsViewModel = hiltVie
 	}
 
 	pickerCategory?.let { category ->
-		CalendarTargetListDialog(
+		SubscriptionTargetListDialog(
 			category = category,
 			onDismiss = { pickerCategory = null },
-			onPick = { target ->
+			onPick = { request ->
 				pickerCategory = null
-				create(target.request)
+				create(request)
 			}
 		)
 	}
@@ -271,136 +265,17 @@ fun SettingsCategoryCalendar(viewModel: CalendarSubscriptionsViewModel = hiltVie
 	}
 }
 
-/** A subscribable target and the mint request it maps to. */
-private data class CalendarTarget(val label: String, val request: ProxyCalendarTokenRequest)
-
-/** A group of targets the user picks from, e.g. all classes. */
-private data class CalendarCategory(
-	val titleRes: Int,
-	val targets: List<CalendarTarget>,
-	val searchable: Boolean
-)
-
-private fun calendarCategories(options: ProxyCalendarOptions): List<CalendarCategory> = buildList {
-	options.personal?.let {
-		add(
-			CalendarCategory(
-				R.string.preference_timetable_calendar_personal,
-				listOf(CalendarTarget(it.name, ProxyCalendarTokenRequest(personal = true))),
-				searchable = false
-			)
-		)
-	}
-	options.classes.toCategory(R.string.preference_timetable_calendar_classes) { ProxyCalendarTokenRequest(classId = it.id) }
-		?.let(::add)
-	options.teacher.toCategory(R.string.preference_timetable_calendar_teachers) { ProxyCalendarTokenRequest(teacherId = it.id) }
-		?.let(::add)
-	options.room.toCategory(R.string.preference_timetable_calendar_rooms) { ProxyCalendarTokenRequest(roomId = it.id) }
-		?.let(::add)
-	options.subject.toCategory(R.string.preference_timetable_calendar_subjects) { ProxyCalendarTokenRequest(subjectId = it.id) }
-		?.let(::add)
-	options.technik?.let {
-		add(
-			CalendarCategory(
-				R.string.preference_timetable_calendar_technik,
-				listOf(CalendarTarget(it.name, ProxyCalendarTokenRequest(classId = it.id))),
-				searchable = false
-			)
-		)
-	}
-}
-
-private fun List<ProxyCalendarOption>.toCategory(
-	titleRes: Int,
-	request: (ProxyCalendarOption) -> ProxyCalendarTokenRequest
-): CalendarCategory? =
-	if (isEmpty()) null
-	else CalendarCategory(titleRes, map { CalendarTarget(it.name, request(it)) }, searchable = true)
-
-@Composable
-private fun CalendarCategoryPickerDialog(
-	options: ProxyCalendarOptions,
-	onDismiss: () -> Unit,
-	onPick: (CalendarCategory) -> Unit
-) {
-	val categories = calendarCategories(options)
-
-	AlertDialog(
-		onDismissRequest = onDismiss,
-		title = { Text(stringResource(R.string.preference_timetable_calendar_add)) },
-		text = {
-			Column(
-				modifier = Modifier.verticalScroll(rememberScrollState()),
-				verticalArrangement = Arrangement.spacedBy(2.dp)
-			) {
-				categories.forEach { category ->
-					ListItem(
-						headlineContent = { Text(stringResource(category.titleRes)) },
-						modifier = Modifier.clickable { onPick(category) }
-					)
-				}
-			}
-		},
-		confirmButton = {
-			TextButton(onClick = onDismiss) {
-				Text(stringResource(R.string.all_cancel))
-			}
-		}
+/** The calendar targets the active account may subscribe to. */
+private fun calendarTargets(options: ProxyCalendarOptions): List<SubscriptionCategory<ProxyCalendarTokenRequest>> =
+	subscriptionCategories(
+		options,
+		personal = { ProxyCalendarTokenRequest(personal = true) },
+		classTarget = { ProxyCalendarTokenRequest(classId = it.id) },
+		teacher = { ProxyCalendarTokenRequest(teacherId = it.id) },
+		room = { ProxyCalendarTokenRequest(roomId = it.id) },
+		subject = { ProxyCalendarTokenRequest(subjectId = it.id) },
+		technik = { ProxyCalendarTokenRequest(classId = it.id) }
 	)
-}
-
-@Composable
-private fun CalendarTargetListDialog(
-	category: CalendarCategory,
-	onDismiss: () -> Unit,
-	onPick: (CalendarTarget) -> Unit
-) {
-	var query by remember { mutableStateOf("") }
-	val filtered = remember(category, query) {
-		if (query.isBlank()) category.targets
-		else category.targets.filter { it.label.contains(query.trim(), ignoreCase = true) }
-	}
-
-	AlertDialog(
-		onDismissRequest = onDismiss,
-		title = { Text(stringResource(category.titleRes)) },
-		text = {
-			Column {
-				if (category.searchable) {
-					OutlinedTextField(
-						value = query,
-						onValueChange = { query = it },
-						singleLine = true,
-						placeholder = { Text(stringResource(R.string.preference_timetable_calendar_search)) },
-						modifier = Modifier
-							.fillMaxWidth()
-							.padding(bottom = 8.dp)
-					)
-				}
-				if (filtered.isEmpty()) {
-					Text(
-						text = stringResource(R.string.preference_timetable_calendar_no_results),
-						modifier = Modifier.padding(16.dp)
-					)
-				} else {
-					LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
-						items(filtered) { target ->
-							ListItem(
-								headlineContent = { Text(target.label) },
-								modifier = Modifier.clickable { onPick(target) }
-							)
-						}
-					}
-				}
-			}
-		},
-		confirmButton = {
-			TextButton(onClick = onDismiss) {
-				Text(stringResource(R.string.all_cancel))
-			}
-		}
-	)
-}
 
 @Composable
 private fun CalendarActionsDialog(

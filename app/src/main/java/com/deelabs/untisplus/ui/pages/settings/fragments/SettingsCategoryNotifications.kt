@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavController
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -32,6 +33,7 @@ import com.deelabs.untisplus.R
 import com.deelabs.untisplus.data.settings.model.NotificationVisibility
 import com.deelabs.untisplus.services.TimetableChangeService
 import com.deelabs.untisplus.ui.common.disabled
+import com.deelabs.untisplus.ui.navigation.AppRoutes
 import com.deelabs.untisplus.ui.pages.settings.SettingsScreenViewModel
 import com.deelabs.untisplus.workers.NotificationSetupWorker
 import com.deelabs.untisplus.workers.TimetableChangeWorker
@@ -41,7 +43,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun SettingsCategoryNotifications(viewModel: SettingsScreenViewModel) {
+fun SettingsCategoryNotifications(navController: NavController, viewModel: SettingsScreenViewModel) {
 	val scope = rememberCoroutineScope()
 	val context = LocalContext.current
 
@@ -175,6 +177,18 @@ fun SettingsCategoryNotifications(viewModel: SettingsScreenViewModel) {
 						TimetableChangeWorker.cancel(context)
 						TimetableChangeService.stop(context)
 					}
+				}
+			)
+
+			Preference(
+				title = { Text(stringResource(R.string.preference_notifications_subscriptions)) },
+				summary = { Text(stringResource(R.string.preference_notifications_subscriptions_desc)) },
+				onClick = { navController.navigate(AppRoutes.Settings.ChangeSubscriptions) },
+				leadingContent = {
+					Icon(
+						painter = painterResource(id = R.drawable.settings_notifications),
+						contentDescription = null
+					)
 				}
 			)
 		}

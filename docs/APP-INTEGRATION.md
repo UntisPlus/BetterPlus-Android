@@ -169,6 +169,14 @@ App work:
   in the notification. A full `ProxyTimetableChangeRow` → WebUntis `Period`
   mapping is **not derivable** (the wire row carries just the changed fields —
   not colors/elements/rights), so none is attempted.
+- ✅ Self-service delivery targets (`docs/PROXY-API.md` §5): Settings →
+  Notifications → *Change subscriptions* manages the caller's own webhooks
+  (`/api/webhooks`) and ntfy topics (`/api/ntfy`). Targets come from
+  `GET /api/notifications/options` (the calendar catalog minus the synthetic
+  Technik aggregate); the shared two-step picker is reused from the calendar
+  screen. Lists return only the caller's rows; each can be tested
+  (`POST …/{id}/test`) and deleted (`DELETE …/{id}`). Technik is excluded because
+  the change poller cannot deliver it.
 
 **Accept**: app gets a change notification within seconds while running (≤15 min
 backstop otherwise). ✅
