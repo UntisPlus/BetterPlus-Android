@@ -65,6 +65,23 @@ class ProxyRepository @Inject constructor(
 
 	suspend fun status(): ProxyStatus = withSession { base, _ -> proxyStatusApi.status(base) }
 
+	/**
+	 * Cheap reachability pre-flight against the **public** `GET /status`, for a
+	 * specific user and without touching the session. A reachable proxy always
+	 * answers `{"status":"ok"}`; this returns `false` only when the request
+	 * failed. Background change detection uses it to skip a full poll/stream
+	 * attempt while the proxy is unreachable.
+	 */
+	suspend fun isReachable(user: User): Boolean {
+		if (!user.usesUntisPlusProxy) return false
+		return try {
+			proxyStatusApi.status(user.proxyBaseUrl.toString())
+			true
+		} catch (e: Exception) {
+			false
+		}
+	}
+
 	suspend fun health(): ProxyHealth = withSession { base, _ -> proxyStatusApi.health(base) }
 
 	/** Fetches `/me` and records the permissions for tier gating. */

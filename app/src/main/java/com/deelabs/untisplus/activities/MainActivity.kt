@@ -9,11 +9,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
+import com.deelabs.untisplus.data.repository.UserRepository
+import com.deelabs.untisplus.data.repository.UserSettingsRepository
+import com.deelabs.untisplus.services.TimetableChangeService
 import com.deelabs.untisplus.ui.navigation.AppNavigator
 import com.deelabs.untisplus.ui.navigation.AppRoutes
 import com.deelabs.untisplus.ui.pages.main.MainAppContent
 import com.deelabs.untisplus.ui.pages.main.MainViewModel
+import com.deelabs.untisplus.workers.TimetableChangeWorker
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,9 +34,26 @@ class MainActivity : ComponentActivity() {
 	@Inject
 	lateinit var appNavigator: AppNavigator
 
+	@Inject
+	lateinit var userRepository: UserRepository
+
+	@Inject
+	lateinit var userSettingsRepository: UserSettingsRepository
+
 	override fun onCreate(savedInstanceState: Bundle?) {
 		enableEdgeToEdge()
 		super.onCreate(savedInstanceState)
+
+		// Re-arm live timetable change detection when the app is opened, since a
+		// foreground service can't be (re)started from the background on Android 12+.
+		lifecycleScope.launch {
+			val user = userRepository.currentUser
+			val settings = userSettingsRepository.getSettings().first()
+			if (user?.usesUntisPlusProxy == true && settings.notificationsEnable && settings.timetableChangeNotifications) {
+				TimetableChangeWorker.schedule(this@MainActivity)
+				TimetableChangeService.start(this@MainActivity)
+			}
+		}
 
 		// Handle deep link (login data) BEFORE you setContent
 		handleIntent(intent)

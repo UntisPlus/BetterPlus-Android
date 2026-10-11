@@ -30,6 +30,7 @@ import com.sapuseven.compose.protostore.ui.preferences.PreferenceGroup
 import com.sapuseven.compose.protostore.ui.preferences.SwitchPreference
 import com.deelabs.untisplus.R
 import com.deelabs.untisplus.data.settings.model.NotificationVisibility
+import com.deelabs.untisplus.services.TimetableChangeService
 import com.deelabs.untisplus.ui.common.disabled
 import com.deelabs.untisplus.ui.pages.settings.SettingsScreenViewModel
 import com.deelabs.untisplus.workers.NotificationSetupWorker
@@ -114,6 +115,7 @@ fun SettingsCategoryNotifications(viewModel: SettingsScreenViewModel) {
 				} else {
 					clearNotifications()
 					TimetableChangeWorker.cancel(context)
+					TimetableChangeService.stop(context)
 					false
 				}
 			}
@@ -166,7 +168,13 @@ fun SettingsCategoryNotifications(viewModel: SettingsScreenViewModel) {
 				value = { it.timetableChangeNotifications },
 				onValueChange = {
 					timetableChangeNotifications = it
-					if (it) TimetableChangeWorker.schedule(context) else TimetableChangeWorker.cancel(context)
+					if (it) {
+						TimetableChangeWorker.schedule(context)
+						TimetableChangeService.start(context)
+					} else {
+						TimetableChangeWorker.cancel(context)
+						TimetableChangeService.stop(context)
+					}
 				}
 			)
 		}

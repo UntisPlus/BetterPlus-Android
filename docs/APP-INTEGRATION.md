@@ -64,16 +64,24 @@ endpoints (not 401). (Done — unit-tested in `ProxyCookieStorageTest`.)
 
 ---
 
-## 3. `/status` health probe ⚠️
+## 3. `/status` health probe ✅
 
 Backend `GET /status` is **public** (no auth) and returns
-`{status, mode, version, uptime_sec}`.
+`{status, mode, version, uptime_sec}` (always `"status":"ok"` while the process
+is up — it is a liveness probe, not a degraded-mode signal; that is `/healthz`).
 
-Client done: `ProxyStatusApi.status()` / `.health()` (`:api`), callable via
-`ProxyRepository.status()`. Still to do: use it as a connectivity pre-flight in
-`DailyWorker` / `TimetableDependantWorker` instead of probing a real login.
+Client: `ProxyStatusApi.status()` / `.health()` (`:api`), callable via
+`ProxyRepository.status()`. `ProxyRepository.isReachable(user)` is the cheap
+pre-flight (per-user, no session), wired into **change detection**
+(`TimetableChangeWorker`, `TimetableChangeService`) so a poll/stream attempt is
+skipped cheaply while the proxy is unreachable.
 
-**Accept**: app can show/decide server reachability cheaply.
+It is deliberately **not** wired into `DailyWorker`'s timetable load: that load
+goes straight to WebUntis (intern), not through the proxy, so gating it on proxy
+reachability would drop a working load when only the proxy is down.
+
+**Accept**: app can show/decide server reachability cheaply. ✅ (Settings → About
+diagnostics + background pre-flight.)
 
 ---
 
@@ -112,33 +120,43 @@ subscribe from Outlook.
 
 ---
 
-## 5. Timetable change-detection + notifications ⚠️ (polling done)
+## 5. Timetable change-detection + notifications ✅
 
 Backend contract (`notify.go`, poll `-poll-interval` 60s, window `-1..+4d`):
 
 ```
 GET /api/timetable/changes?since=<ver>&classId=<id>&school=<s>   → 304 if none,
         else {school, classId, since, current, changes:[PeriodRow]}
-GET /api/timetable/stream   SSE: event:snapshot (on connect), then event:change,
-        :heartbeat every 30s
+GET /api/timetable/stream?school=<s>   SSE (the server derives the class from the
+        session); frames: snapshot | change | student-events, heartbeat 30s
 PeriodRow = {periodId, kind: ADDED|CHANGED|REMOVED, start, end, subject, room, description, modVer}
 ```
 
 App work:
 - ✅ `ProxyTimetableApi` poller: `changes?since=`, current version persisted per
   user in `settings.proto` (`timetableChangeSince` / `timetableChangeSinceEvents`)
-  so it resumes across restarts.
+  so it resumes across restarts. The poll needs a `classId`, which students lack
+  (`klassenIds` empty); for them only the SSE path applies, so the worker
+  early-returns.
 - ✅ `TimetableChangeWorker` (WorkManager, 15 min, network-constrained) posts a
-  notification when changes arrive; toggled in Settings → Notifications.
-- 🔲 SSE client (`ProxyTimetableApi.stream()` implemented) still needs a
-  foreground service and a `TimetableViewModel` refresh callback for ~60 s
-  delivery.
-- 🔲 Map `PeriodRow` to/from the app's existing `api/.../model/untis/Period.kt`.
-- Note the proxy only returns changes for the **requester's own class**
-  (403 otherwise) — the app should pass its own `classId`.
+  notification when changes arrive; toggled in Settings → Notifications. A
+  `ProxyRepository.isReachable()` pre-flight skips the poll while the proxy is
+  down.
+- ✅ Live path: `TimetableChangeService` — a `dataSync` foreground service that
+  keeps `ProxyTimetableApi.stream()` open, notifies within seconds, and bumps
+  `TimetableChangeBus` (observed by `TimetableViewModel`, which reloads the
+  visible week). Started by the Settings toggle and re-armed in
+  `MainActivity.onCreate` (a FGS cannot be started from the background on
+  Android 12+). On Android 15 `dataSync` is bounded by the OS' 6 h/day budget;
+  the worker remains the backstop. The stream is server-class-scoped, so it works
+  without an app-side `classId`.
+- ✅ Change rows are shown as a **digest** (subject · room, `+`/`~`/`–` per kind)
+  in the notification. A full `ProxyTimetableChangeRow` → WebUntis `Period`
+  mapping is **not derivable** (the wire row carries just the changed fields —
+  not colors/elements/rights), so none is attempted.
 
-**Accept**: app gets a push/notification within ~60s (one poll interval) of a
-timetable change, with the changed periods.
+**Accept**: app gets a change notification within seconds while running (≤15 min
+backstop otherwise). ✅
 
 ---
 
@@ -192,8 +210,15 @@ Endpoint: `GET {base}/me` (requires `JSESSIONID` cookie from login).
 
 Client done: `ProxyStatusApi.me()` → `ProxyMe` (`:api`), reachable via
 `ProxyRepository.refreshMe()`, which records the tier in
-`ProxyRepository.permissions` (refreshed when Settings opens). Still to do: gate
-edit affordances / badges on `permissions`.
+`ProxyRepository.permissions` (refreshed when Settings opens).
+
+**No editor-tier gating is applied, deliberately.** The proxy gates forwarded
+WebUntis *write* methods (`rest.go`/`jsonrpc*.go` → `isEditor`), but the app's
+only write UI (`AbsenceCheck`, the class register) talks to WebUntis intern
+**directly**, not through the proxy, and the proxy's `/api/absence/notes` store
+is the student's own, session-scoped and *not* editor-gated. So there is no
+proxy write surface to hide; `boosted`/`recon` need no badge either (their effect
+is already visible as reconstructed timetables via §6).
 
 **Response**:
 ```json
@@ -224,11 +249,11 @@ edit affordances / badges on `permissions`.
 1. ✅ Reconcile hostname → `api-untis.deelabs.tech` (app).
 2. ✅ Add cookie persistence (`:api` client + DI + `ProxyRepository` silent
    refresh) — unlocks #3/#4/#5.
-3. ⚠️ `/status` probe model/client done; connectivity pre-flight not wired (the
-   upstream call already fails fast when the proxy is down — low value).
+3. ✅ `/status` probe wired as a per-user reachability pre-flight in change
+   detection (not in `DailyWorker` — its load is direct-to-WebUntis).
 4. ✅ Calendar token API + Settings → Timetable link (copy/share).
-5. ⚠️ Change-detection: **polling** done (`TimetableChangeWorker`, persisted
-   version, notification). SSE foreground service + in-app refresh still TODO.
+5. ✅ Change-detection: polling backstop + SSE `dataSync` foreground service,
+   persisted version shared by both, in-app refresh via `TimetableChangeBus`.
 
 Each step ends with its **Accept** criteria above being greener in the app on a
 real device against `api-untis.deelabs.tech`.

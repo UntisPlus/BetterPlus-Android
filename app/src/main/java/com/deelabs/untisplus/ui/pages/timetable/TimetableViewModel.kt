@@ -22,6 +22,7 @@ import com.deelabs.untisplus.api.model.untis.timetable.Period
 import com.deelabs.untisplus.api.model.untis.timetable.PeriodElement
 import com.deelabs.untisplus.data.database.entities.User
 import com.deelabs.untisplus.data.repository.MasterDataRepository
+import com.deelabs.untisplus.data.repository.TimetableChangeBus
 import com.deelabs.untisplus.data.repository.TimetableRepository
 import com.deelabs.untisplus.data.repository.UserRepository
 import com.deelabs.untisplus.data.repository.UserSettingsRepository
@@ -54,6 +55,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -71,6 +73,7 @@ class TimetableViewModel @Inject constructor(
 	internal val userRepository: UserRepository,
 	internal val timetableRepository: TimetableRepository,
 	internal val masterDataRepository: MasterDataRepository,
+	internal val timetableChangeBus: TimetableChangeBus,
 	internal val clock: Clock,
 	internal val weekLogicService: WeekLogicService,
 	buildConfigFieldsProvider: BuildConfigFieldsProvider,
@@ -223,6 +226,14 @@ class TimetableViewModel @Inject constructor(
 				)
 				_weekViewScale.value = userSettings.timetableZoomLevel
 				_weekViewZoomEnabled.value = userSettings.timetableZoomEnabled
+			}
+		}
+
+		viewModelScope.launch {
+			// The proxy reported a timetable change (live SSE or backstop poll):
+			// invalidate and re-fetch the visible week.
+			timetableChangeBus.updates.drop(1).collect {
+				onPageReload(currentPage)
 			}
 		}
 

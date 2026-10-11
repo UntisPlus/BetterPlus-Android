@@ -229,6 +229,10 @@
 	<string name="notifications_channel_timetablechanges_desc">Shows notifications when substitutions or other timetable changes are published</string>
 	<string name="notifications_timetable_changes_title">Timetable changed</string>
 	<string name="notifications_timetable_changes_text">%1$d change(s) for your class</string>
+	<string name="notifications_channel_timetablechanges_service">Live timetable monitoring</string>
+	<string name="notifications_channel_timetablechanges_service_desc">Keeps a connection open so timetable changes are detected within seconds</string>
+	<string name="notifications_timetable_changes_service_title">Watching for timetable changes</string>
+	<string name="notifications_timetable_changes_service_text">You\'ll be notified about substitutions as soon as they are published</string>
 	<string name="notifications_text_error_message">You won\'t get any notifications today.</string>
     <string name="notifications_text_error_title">Failed to load timetable</string>
     <string name="notifications_text_first_title">School starts at %1$s</string>
