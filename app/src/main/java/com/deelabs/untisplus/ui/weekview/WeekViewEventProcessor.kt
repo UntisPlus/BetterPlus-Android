@@ -11,21 +11,19 @@ private enum class EventType {
 	EVENT_STOP
 }
 
-private data class TimelineEvent(
+private class TimelineEvent(
 	val eventTime: LocalDateTime,
 	val eventType: EventType,
 	val eventId: Int,
 	val eventData: Event<*>
-)
-
-private class EventComparator : Comparator<TimelineEvent> {
-	override fun compare(o1: TimelineEvent, o2: TimelineEvent): Int {
-		if (o1.eventTime > o2.eventTime) return 1
-		if (o1.eventTime < o2.eventTime) return -1
-		if (o1.eventType === EventType.EVENT_START && o2.eventType === EventType.EVENT_STOP) return 1
-		if (o1.eventType === EventType.EVENT_STOP && o2.eventType === EventType.EVENT_START) return -1
-		if (o1.eventId > o2.eventId) return 1
-		if (o1.eventId < o2.eventId) return -1
+) : Comparable<TimelineEvent> {
+	override fun compareTo(other: TimelineEvent): Int {
+		if (eventTime > other.eventTime) return 1
+		if (eventTime < other.eventTime) return -1
+		if (eventType === EventType.EVENT_START && other.eventType === EventType.EVENT_STOP) return 1
+		if (eventType === EventType.EVENT_STOP && other.eventType === EventType.EVENT_START) return -1
+		if (eventId > other.eventId) return 1
+		if (eventId < other.eventId) return -1
 		return 0
 	}
 }
@@ -33,7 +31,7 @@ private class EventComparator : Comparator<TimelineEvent> {
 // Based on https://stackoverflow.com/questions/53215825/return-optimized-x-coordinates-to-normalize-maximize-area-for-an-array-of-rectan#answer-53222638
 // (Archive: https://web.archive.org/web/20230222010425/https://stackoverflow.com/questions/53215825/return-optimized-x-coordinates-to-normalize-maximize-area-for-an-array-of-rectan)
 internal fun <T> arrangeEvents(events: List<Event<T>>, maxSimultaneous: Int) {
-	val eventQueue: PriorityQueue<TimelineEvent> = PriorityQueue(EventComparator())
+	val eventQueue: PriorityQueue<TimelineEvent> = PriorityQueue()
 	val regionQueue: Queue<TimelineEvent> = LinkedList()
 	val startedEventIds: MutableList<Int> = mutableListOf()
 

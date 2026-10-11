@@ -150,9 +150,12 @@ android {
 	lint {
 		// Translations are managed via Crowdin (crowdin.yml); default-locale strings can be
 		// removed before the translations catch up, so don't fail the release on either the
-		// missing- or the leftover-translation check.
+		// missing- or the leftover-translation check. ImpliedQuantity fires on plural
+		// translations (e.g. "un jour") that Crowdin produces without a %d placeholder;
+		// they are not fixable here without hand-editing res/values-*.
 		disable += "MissingTranslation"
 		disable += "ExtraTranslation"
+		disable += "ImpliedQuantity"
 	}
 }
 

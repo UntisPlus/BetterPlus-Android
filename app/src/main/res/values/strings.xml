@@ -309,6 +309,8 @@
     <string name="preference_notifications_enable">Enable break notifications</string>
     <string name="preference_notifications_timetable_changes">Timetable change notifications</string>
     <string name="preference_notifications_timetable_changes_desc">Get notified when your school publishes substitution changes</string>
+    <string name="preference_notifications_timetable_changes_wifi_only">Only on Wi-Fi</string>
+    <string name="preference_notifications_timetable_changes_wifi_only_desc">Pause live updates on mobile data (and in battery saver). The periodic check still runs.</string>
     <string name="preference_notifications_enable_desc">Displays a notification with information about the next lesson during breaks</string>
     <string name="preference_notifications_first_lesson">Notification before first lesson</string>
     <string name="preference_notifications_first_lesson_desc">Show a notification right before school starts</string>

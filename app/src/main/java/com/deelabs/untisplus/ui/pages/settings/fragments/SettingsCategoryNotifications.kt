@@ -10,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -73,7 +74,9 @@ fun SettingsCategoryNotifications(navController: NavController, viewModel: Setti
 	}
 
 	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-		val visible by viewModel.userSettingsRepository.getSettings().map { it.notificationsEnable }.collectAsState(initial = false)
+		val visible by remember {
+			viewModel.userSettingsRepository.getSettings().map { it.notificationsEnable }
+		}.collectAsState(initial = false)
 		ScheduleExactAlarmInfoMessage(
 			visible = visible,
 			primaryText = R.string.preference_notifications_exact_alarms_unavailable,
@@ -82,7 +85,9 @@ fun SettingsCategoryNotifications(navController: NavController, viewModel: Setti
 	}
 
 	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-		val notificationsEnabled by viewModel.userSettingsRepository.getSettings().map { it.notificationsEnable }.collectAsState(initial = false)
+		val notificationsEnabled by remember {
+			viewModel.userSettingsRepository.getSettings().map { it.notificationsEnable }
+		}.collectAsState(initial = false)
 		NotificationsInfoMessage(visible = !notificationsEnabled && notificationsMessageVisible)
 	}
 
@@ -177,6 +182,19 @@ fun SettingsCategoryNotifications(navController: NavController, viewModel: Setti
 						TimetableChangeWorker.cancel(context)
 						TimetableChangeService.stop(context)
 					}
+				}
+			)
+
+			SwitchPreference(
+				title = { Text(stringResource(R.string.preference_notifications_timetable_changes_wifi_only)) },
+				summary = { Text(stringResource(R.string.preference_notifications_timetable_changes_wifi_only_desc)) },
+				enabledCondition = { it.notificationsEnable && it.timetableChangeNotifications },
+				settingsRepository = viewModel.userSettingsRepository,
+				value = { it.timetableChangeWifiOnly },
+				onValueChange = {
+					timetableChangeWifiOnly = it
+					// Re-arm the watcher so the new network policy applies now.
+					TimetableChangeService.start(context)
 				}
 			)
 

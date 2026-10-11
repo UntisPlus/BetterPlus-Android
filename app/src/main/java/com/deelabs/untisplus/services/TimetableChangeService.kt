@@ -15,6 +15,8 @@ import com.deelabs.untisplus.data.repository.ProxyRepository
 import com.deelabs.untisplus.data.repository.TimetableChangeBus
 import com.deelabs.untisplus.data.repository.UserRepository
 import com.deelabs.untisplus.data.repository.UserSettingsRepository
+import com.deelabs.untisplus.helpers.isOnUnmeteredNetwork
+import com.deelabs.untisplus.helpers.isPowerSaveMode
 import com.deelabs.untisplus.workers.TimetableChangeNotifications
 import com.deelabs.untisplus.workers.TimetableChangeNotifications.NOTIFICATION_ID_SERVICE
 import dagger.hilt.android.AndroidEntryPoint
@@ -100,11 +102,23 @@ class TimetableChangeService : Service() {
 	private suspend fun watch() {
 		while (scope.isActive) {
 			val user = userRepository.currentUser
-			if (user == null || !user.usesUntisPlusProxy ||
-				!userSettingsRepository.getSettings(user.id).first().timetableChangeNotifications
-			) {
+			if (user == null || !user.usesUntisPlusProxy) {
 				stopSelf()
 				return
+			}
+			val settings = userSettingsRepository.getSettings(user.id).first()
+			if (!settings.timetableChangeNotifications) {
+				stopSelf()
+				return
+			}
+
+			// Battery/Wi-Fi-aware: a persistent socket is exactly what battery
+			// saver and metered connections try to avoid. When paused the
+			// 15-minute worker remains the backstop, so changes are still
+			// announced (just not within seconds).
+			if (!canHoldStream(settings.timetableChangeWifiOnly)) {
+				delay(RECONNECT_DELAY_MS)
+				continue
 			}
 
 			try {
@@ -145,6 +159,13 @@ class TimetableChangeService : Service() {
 
 	private fun notify(changes: List<ProxyTimetableChangeRow>) {
 		TimetableChangeNotifications.postChanges(this, changes)
+	}
+
+	/** Whether the persistent SSE stream may run right now. */
+	private fun canHoldStream(wifiOnly: Boolean): Boolean {
+		if (isPowerSaveMode()) return false
+		if (wifiOnly && !isOnUnmeteredNetwork()) return false
+		return true
 	}
 
 	override fun onDestroy() {

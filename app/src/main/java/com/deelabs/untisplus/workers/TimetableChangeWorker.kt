@@ -15,6 +15,7 @@ import com.deelabs.untisplus.data.repository.ProxyRepository
 import com.deelabs.untisplus.data.repository.TimetableChangeBus
 import com.deelabs.untisplus.data.repository.UserRepository
 import com.deelabs.untisplus.data.repository.UserSettingsRepository
+import com.deelabs.untisplus.helpers.isOnUnmeteredNetwork
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -71,6 +72,12 @@ class TimetableChangeWorker @AssistedInject constructor(
 		val classId = user.proxyClassId ?: return Result.success()
 		val settings = userSettingsRepository.getSettings(user.id).first()
 		if (!settings.timetableChangeNotifications) return Result.success()
+
+		// Honour "Wi-Fi only": skip the poll on metered connections rather than
+		// spending mobile data on a background check.
+		if (settings.timetableChangeWifiOnly && !applicationContext.isOnUnmeteredNetwork()) {
+			return Result.success()
+		}
 
 		// Cheap pre-flight: skip the poll while the proxy is unreachable.
 		if (!proxyRepository.isReachable(user)) return Result.success()

@@ -81,6 +81,7 @@ message UserSettings {
   uint64 timetableChangeSince = 58;
   uint64 timetableChangeSinceEvents = 59;
   bool timetableChangeNotifications = 60;
+  bool timetableChangeWifiOnly = 61;
 }
 
 message GlobalSettings {

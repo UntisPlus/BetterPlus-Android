@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -88,7 +89,9 @@ fun SettingsCategoryGeneral(viewModel: SettingsScreenViewModel) {
 	}
 
 	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-		val visible by viewModel.userSettingsRepository.getSettings().map { it.automuteEnable }.collectAsState(initial = false)
+		val visible by remember {
+			viewModel.userSettingsRepository.getSettings().map { it.automuteEnable }
+		}.collectAsState(initial = false)
 		ScheduleExactAlarmInfoMessage(
 			visible = visible,
 			primaryText = R.string.preference_automute_exact_alarms_unavailable,
